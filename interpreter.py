@@ -56,7 +56,7 @@ class Interpreter:
                         return TruthValue("FALSE")
 
             if isinstance(key, LogicalOp) and value == TruthValue("FALSE"):
-                # AND Case: If (A AND B) == TRUE, then A == TRUE and B == TRUE
+                # AND Case: If (A AND B) == FALSE, then A == FALSE or B == FALSE
                 if key.op.upper() == "AND":
                     if node.expr == key.left:
                         other = key.right
@@ -69,7 +69,7 @@ class Interpreter:
                     if other_val == TruthValue("TRUE"):
                         return TruthValue("FALSE")
 
-                # OR: if A OR B == TRUE, and other side is FALSE, then this side is TRUE
+                # OR: if A OR B == FALSE, and other side is TRUE, then this side is FALSE
                 elif key.op.upper() == "OR":
                     if self.expression_contains(key, node.expr):
                         return TruthValue("FALSE")
