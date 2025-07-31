@@ -20,10 +20,15 @@ class Interpreter:
             evaluated_value = TruthValue(node.value)
             self.kb[statement] = evaluated_value
 
-            if isinstance(node.statement, LogicalOp) and node.statement.op.upper() == "NOT":
-                transformed = apply_demorgan(node.statement)
-                if transformed != node.statement:
-                    self.kb[transformed] = node.value
+            # Apply DeMorgan's Law
+            transformed = apply_demorgan(node.statement)
+            if transformed != node.statement:
+                self.kb[transformed] = node.value
+
+            # Apply reverse DeMorgan's Law even
+            reverse_transformed = apply_reverse_demorgan(statement)
+            if reverse_transformed != statement:
+                self.kb[reverse_transformed] = evaluated_value
 
             return evaluated_value
         else:
@@ -242,3 +247,30 @@ def apply_demorgan(expr):
         return LogicalOp("AND", LogicalOp("NOT", inner.left), LogicalOp("NOT", inner.right))
     else:
         return expr  # Not a DeMorgan target
+
+def apply_reverse_demorgan(expr):
+    """
+    Applies reverse DeMorgan's law:
+    (NOT A OR NOT B) => NOT (A AND B)
+    (NOT A AND NOT B) => NOT (A OR B)
+    """
+    if not isinstance(expr, LogicalOp):
+        return expr
+
+    if expr.op.upper() == "OR":
+        left, right = expr.left, expr.right
+        if (
+            isinstance(left, LogicalOp) and left.op.upper() == "NOT" and
+            isinstance(right, LogicalOp) and right.op.upper() == "NOT"
+        ):
+            return LogicalOp("NOT", LogicalOp("AND", left.left, right.left))
+
+    elif expr.op.upper() == "AND":
+        left, right = expr.left, expr.right
+        if (
+            isinstance(left, LogicalOp) and left.op.upper() == "NOT" and
+            isinstance(right, LogicalOp) and right.op.upper() == "NOT"
+        ):
+            return LogicalOp("NOT", LogicalOp("OR", left.left, right.left))
+
+    return expr
