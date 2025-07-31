@@ -19,6 +19,12 @@ class Interpreter:
         if isinstance(statement, (Predicate, Conditional, Quantifier, LogicalOp)):
             evaluated_value = TruthValue(node.value)
             self.kb[statement] = evaluated_value
+
+            if isinstance(node.statement, LogicalOp) and node.statement.op.upper() == "NOT":
+                transformed = apply_demorgan(node.statement)
+                if transformed != node.statement:
+                    self.kb[transformed] = node.value
+
             return evaluated_value
         else:
             raise TypeError("Only predicate, conditional, and quantifier assignments are supported.")
@@ -216,3 +222,23 @@ class Interpreter:
                 if self.expression_contains(expr.right, subexpr):
                     return True
         return False
+
+def apply_demorgan(expr):
+    """
+    Applies DeMorgan's law to NOT expressions with AND/OR inside.
+    NOT (A AND B) => (NOT A OR NOT B)
+    NOT (A OR B)  => (NOT A AND NOT B)
+    """
+    if not (isinstance(expr, LogicalOp) and expr.op.upper() == "NOT"):
+        return expr  # Not a NOT expression, return as-is
+
+    inner = expr.left
+    if not isinstance(inner, LogicalOp):
+        return expr  # Nothing to transform
+
+    if inner.op.upper() == "AND":
+        return LogicalOp("OR", LogicalOp("NOT", inner.left), LogicalOp("NOT", inner.right))
+    elif inner.op.upper() == "OR":
+        return LogicalOp("AND", LogicalOp("NOT", inner.left), LogicalOp("NOT", inner.right))
+    else:
+        return expr  # Not a DeMorgan target
