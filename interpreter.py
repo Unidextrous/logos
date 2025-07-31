@@ -90,6 +90,18 @@ class Interpreter:
                     if conditional_value == TruthValue("TRUE") and antecedent_value == TruthValue("TRUE"):
                         return TruthValue("TRUE")
 
+        # Handle double negation: if NOT NOT A = TRUE, then A = TRUE
+        for expr, value in self.kb.items():
+            if (
+                isinstance(expr, LogicalOp) and 
+                expr.op.upper() == "NOT" and 
+                isinstance(expr.left, LogicalOp) and 
+                expr.left.op.upper() == "NOT"
+            ):
+                inner = expr.left.left
+                if inner == node.expr:
+                    return value  # pass along the truth of the double negation
+
         return TruthValue("UNKNOWN")
 
     def eval_TruthValue(self, node):
