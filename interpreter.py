@@ -34,6 +34,12 @@ class Interpreter:
             if isinstance(key, LogicalOp) and value == TruthValue("TRUE"):
                 # AND Case: If (A AND B) == TRUE, then A == TRUE and B == TRUE
                 if key.op.upper() == "AND":
+                    # If (NOT A AND NOT B) == TRUE, then both NOT A == TRUE and NOT B == TRUE -> A and B must be FALSE
+                    for sub in [key.left, key.right]:
+                        if isinstance(sub, LogicalOp) and sub.op.upper() == "NOT":
+                            if sub.left == node.expr:
+                                return TruthValue("FALSE")
+                            
                     if self.expression_contains(key, node.expr):
                         return TruthValue("TRUE")
 
@@ -71,6 +77,12 @@ class Interpreter:
 
                 # OR: if A OR B == FALSE, and other side is TRUE, then this side is FALSE
                 elif key.op.upper() == "OR":
+                    # If (NOT A OR NOT B) == FALSE, then both NOT A == FALSE and NOT B == FALSE -> A and B must be TRUE
+                    for sub in [key.left, key.right]:
+                        if isinstance(sub, LogicalOp) and sub.op.upper() == "NOT":
+                            if sub.left == node.expr:
+                                return TruthValue("TRUE")
+                            
                     if self.expression_contains(key, node.expr):
                         return TruthValue("FALSE")
 
