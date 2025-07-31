@@ -25,7 +25,7 @@ class Interpreter:
             if transformed != node.statement:
                 self.kb[transformed] = node.value
 
-            # Apply reverse DeMorgan's Law even
+            # Apply reverse DeMorgan's Law
             reverse_transformed = apply_reverse_demorgan(statement)
             if reverse_transformed != statement:
                 self.kb[reverse_transformed] = evaluated_value
