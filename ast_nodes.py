@@ -118,3 +118,16 @@ class Quantifier(Node):
     
     def __hash__(self):
         return hash((self.quantifier, tuple(self.vars), self.statement))
+
+class Variable(Node):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name  # or f"?{self.name}" for clarity
+
+    def __eq__(self, other):
+        return isinstance(other, Variable) and self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)

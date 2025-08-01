@@ -202,14 +202,14 @@ class Parser:
 
         vars = []
         if self.current_tok.type == TT_IDENTIFIER:
-            vars.append(self.current_tok.value)
+            vars.append(Variable(self.current_tok.value))
             self.advance()
 
             while self.current_tok and self.current_tok.type == TT_COMMA:
                 self.advance()
                 if self.current_tok.type != TT_IDENTIFIER:
                     raise Exception("Expected identifier after ',' in quantifier")
-                vars.append(self.current_tok.value)
+                vars.append(Variable(self.current_tok.value))
                 self.advance()
         else:
             raise Exception("Expected variable inside quantifier")

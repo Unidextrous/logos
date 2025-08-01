@@ -274,3 +274,26 @@ def apply_reverse_demorgan(expr):
             return LogicalOp("NOT", LogicalOp("OR", left.left, right.left))
 
     return expr
+
+def substitute(term, var, value):
+    if isinstance(term, Variable):
+        if term == var:
+            return value
+        else:
+            return term
+    elif isinstance(term, Term):
+        return term
+    elif isinstance(term, Predicate):
+        return Predicate(term.name, [substitute(arg, var, value) for arg in term.args])
+    elif isinstance(term, LogicalOp):
+        left = substitute(term.left, var, value)
+        right = substitute(term.right, var, value) if term.right else None
+        return LogicalOp(term.op, left, right)
+    elif isinstance(term, Conditional):
+        return Conditional(substitute(term.antecedent, var, value),
+                           substitute(term.consequent, var, value))
+    elif isinstance(term, Quantifier):
+        return Quantifier(term.quantifier, term.vars,
+                          substitute(term.statement, var, value))
+    else:
+        return term  # return as-is
