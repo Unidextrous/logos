@@ -28,11 +28,11 @@ class Assignment(Node):
         return f"{self.statement} = {self.value}"
 
 class Query(Node):
-    def __init__(self, expr):
-        self.expr = expr
+    def __init__(self, statement):
+        self.statement = statement
 
     def __repr__(self):
-        return f"{self.expr}?"
+        return f"{self.statement}?"
 
 class Term(Node):
     def __init__(self, name):
@@ -101,23 +101,23 @@ class Conditional(Node):
         return hash((self.antecedent, self.consequent))
 
 class Quantifier(Node):
-    def __init__(self, quantifier, vars, statement):
+    def __init__(self, quantifier, vars, expr):
         self.quantifier = quantifier
         self.vars = vars
-        self.statement = statement
+        self.expr = expr
 
     def __repr__(self):
         vars_str = ", ".join(str(v) for v in self.vars)
-        return f"{self.quantifier}({vars_str}): {self.statement}"
+        return f"{self.quantifier}({vars_str}): {self.expr}"
     
     def __eq__(self, other):
         return (isinstance(other, Quantifier) and
                 self.quantifier == other.quantifier and
                 self.vars == other.vars and
-                self.statement == other.statement)
+                self.expr == other.expr)
     
     def __hash__(self):
-        return hash((self.quantifier, tuple(self.vars), self.statement))
+        return hash((self.quantifier, tuple(self.vars), self.expr))
 
 class Variable(Node):
     def __init__(self, name):

@@ -36,7 +36,7 @@ class Interpreter:
     
     def eval_Query(self, node):
         # Try direct match first
-        result = self.evaluate(node.expr)
+        result = self.evaluate(node.statement)
         if result != TruthValue("UNKNOWN") and result is not None:
             return result
 
@@ -48,17 +48,17 @@ class Interpreter:
                     # If (NOT A AND NOT B) == TRUE, then both NOT A == TRUE and NOT B == TRUE -> A and B must be FALSE
                     for sub in [key.left, key.right]:
                         if isinstance(sub, LogicalOp) and sub.op.upper() == "NOT":
-                            if sub.left == node.expr:
+                            if sub.left == node.statement:
                                 return TruthValue("FALSE")
                             
-                    if self.expression_contains(key, node.expr):
+                    if self.expr_contains(key, node.statement):
                         return TruthValue("TRUE")
 
                 # OR: if A OR B == TRUE, and other side is FALSE, then this side is TRUE
                 elif key.op.upper() == "OR":
-                    if node.expr == key.left:
+                    if node.statement == key.left:
                         other = key.right
-                    elif node.expr == key.right:
+                    elif node.statement == key.right:
                         other = key.left
                     else:
                         continue
@@ -69,15 +69,15 @@ class Interpreter:
 
                 # NOT: if NOT A == TRUE, then A == FALSE
                 elif key.op.upper() == "NOT":
-                    if node.expr == key.left:
+                    if node.statement == key.left:
                         return TruthValue("FALSE")
 
             if isinstance(key, LogicalOp) and value == TruthValue("FALSE"):
                 # AND Case: If (A AND B) == FALSE, then A == FALSE or B == FALSE
                 if key.op.upper() == "AND":
-                    if node.expr == key.left:
+                    if node.statement == key.left:
                         other = key.right
-                    elif node.expr == key.right:
+                    elif node.statement == key.right:
                         other = key.left
                     else:
                         continue
@@ -91,15 +91,15 @@ class Interpreter:
                     # If (NOT A OR NOT B) == FALSE, then both NOT A == FALSE and NOT B == FALSE -> A and B must be TRUE
                     for sub in [key.left, key.right]:
                         if isinstance(sub, LogicalOp) and sub.op.upper() == "NOT":
-                            if sub.left == node.expr:
+                            if sub.left == node.statement:
                                 return TruthValue("TRUE")
                             
-                    if self.expression_contains(key, node.expr):
+                    if self.expr_contains(key, node.statement):
                         return TruthValue("FALSE")
 
                 # NOT: if NOT A == TRUE, then A == FALSE
                 elif key.op.upper() == "NOT":
-                    if node.expr == key.left:
+                    if node.statement == key.left:
                         return TruthValue("TRUE")
 
         # Try Modus Ponens inference
@@ -107,7 +107,7 @@ class Interpreter:
             if isinstance(key, Conditional):
                 antecedent = key.antecedent
                 consequent = key.consequent
-                if consequent == node.expr:
+                if consequent == node.statement:
                     antecedent_value = self.kb.get(antecedent)
                     conditional_value = self.kb.get(key)
                     if conditional_value == TruthValue("TRUE") and antecedent_value == TruthValue("TRUE"):
@@ -122,7 +122,7 @@ class Interpreter:
                 expr.left.op.upper() == "NOT"
             ):
                 inner = expr.left.left
-                if inner == node.expr:
+                if inner == node.statement:
                     return value  # pass along the truth of the double negation
 
         return TruthValue("UNKNOWN")
@@ -213,18 +213,18 @@ class Interpreter:
         else:
             return TruthValue("UNKNOWN")
     
-    def expression_contains(self, expr, subexpr):
+    def expr_contains(self, expr, subexpr):
         # Check if subexpr is exactly expr
         if expr == subexpr:
             return True
 
         # If expr is LogicalOp, check recursively
         if isinstance(expr, LogicalOp):
-            if self.expression_contains(expr.left, subexpr):
+            if self.expr_contains(expr.left, subexpr):
                 return True
             # For NOT, right may not exist, so be safe:
             if hasattr(expr, 'right') and expr.right:
-                if self.expression_contains(expr.right, subexpr):
+                if self.expr_contains(expr.right, subexpr):
                     return True
         return False
 

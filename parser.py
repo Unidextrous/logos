@@ -224,8 +224,8 @@ class Parser:
 
         # Nested quantifier support
         if self.current_tok and self.current_tok.type == TT_KEYWORD and self.current_tok.value in ("FORALL", "EXISTS"):
-            stmt = self.quantified()
+            expr = self.quantified()
         else:
-            stmt = self.statement(partial=True)
+            expr = self.statement(partial=True)
 
-        return Quantifier(quant_type, tuple(vars), stmt)
+        return Quantifier(quant_type, tuple(vars), expr)
