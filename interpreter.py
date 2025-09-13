@@ -25,9 +25,6 @@ class Interpreter:
         stmt = node.stmt
         value_node = node.value
 
-        if not isinstance(value_node, TruthValue):
-            raise TypeError("Assignment value must be a TruthValue node")
-
         # Store statement node as key in KB
         self.kb[stmt] = value_node
         return value_node
