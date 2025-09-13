@@ -39,7 +39,7 @@ class Interpreter:
         """Queries are simple: evaluate the underlying statement."""
         stmt = node.stmt
         if stmt in self.kb:
-            return self.kb[stmt]
+            return self.evaluate(self.kb[stmt])
         return self.infer(stmt)
 
     # ----------------------
@@ -93,25 +93,102 @@ class Interpreter:
         return TruthValue("UNKNOWN")
 
     # ----------------------
-    # Logical operation inference
+    # Predicate inference
+    # ----------------------
+    def infer_Predicate(self, node: Predicate):
+        # 1. Direct assignment
+        if node in self.kb:
+            value = self.evaluate(self.kb[node])
+            if isinstance(value, TruthValue):
+                return value
+
+        # 2. Look for logical operators in KB
+        for stmt, val in self.kb.items():
+            if not isinstance(stmt, LogicalOp):
+                continue
+
+            # AND inference
+            if stmt.op == "AND" and val == TruthValue("TRUE"):
+                if node == stmt.left or node == stmt.right:
+                    return TruthValue("TRUE")
+
+            if stmt.op == "OR" and val == TruthValue("FALSE"):
+                if node == stmt.left or node == stmt.right:
+                    return TruthValue("FALSE")
+
+            if stmt.op == "NOT":
+                if stmt.left == node:
+                    if val == TruthValue("TRUE"):
+                        return TruthValue("FALSE")
+                    elif val == TruthValue("FALSE"):
+                        return TruthValue("TRUE")
+
+            # TODO: add more (NAND, NOR, XOR, XNOR)
+
+        # 3. Nothing can be inferred
+        return TruthValue("UNKNOWN")
+
+
+    # ----------------------
+    # LogicalOp inference
     # ----------------------
     def infer_LogicalOp(self, node: LogicalOp):
-        left_val = self.evaluate(node.left)
+        # Try to evaluate using known values of its parts
+        left_val = self.evaluate(node.left) if node.left else None
+        right_val = self.evaluate(node.right) if node.right else None
 
         if node.op == "NOT":
-            return logical_not(left_val)
-        
-        right_val = self.evaluate(node.right)
+            if left_val in (TruthValue("TRUE"), TruthValue("FALSE")):
+                return logical_not(left_val)
 
         if node.op == "AND":
-            return logical_and(left_val, right_val)
-        elif node.op == "OR":
-            return logical_or(left_val, right_val)
+            if left_val == TruthValue("FALSE") or right_val == TruthValue("FALSE"):
+                return TruthValue("FALSE")
+            if left_val == TruthValue("TRUE") and right_val == TruthValue("TRUE"):
+                return TruthValue("TRUE")
+
+        if node.op == "OR":
+            if left_val == TruthValue("TRUE") or right_val == TruthValue("TRUE"):
+                return TruthValue("TRUE")
+            if left_val == TruthValue("FALSE") and right_val == TruthValue("FALSE"):
+                return TruthValue("FALSE")
+
         if node.op == "NAND":
-            return logical_nand(left_val, right_val)
-        elif node.op == "NOR":
-            return logical_nor(left_val, right_val)
-        elif node.op == "XOR":
-            return logical_xor(left_val, right_val)
-        elif node.op == "XNOR":
-            return logical_xnor(left_val, right_val)
+            if left_val == TruthValue("TRUE") and right_val == TruthValue("TRUE"):
+                return TruthValue("FALSE")
+            if left_val == TruthValue("FALSE") or right_val == TruthValue("FALSE"):
+                return TruthValue("TRUE")
+
+        if node.op == "NOR":
+            if left_val == TruthValue("TRUE") or right_val == TruthValue("TRUE"):
+                return TruthValue("FALSE")
+            if left_val == TruthValue("FALSE") and right_val == TruthValue("FALSE"):
+                return TruthValue("TRUE")
+
+        if node.op == "XOR":
+            if left_val in (TruthValue("TRUE"), TruthValue("FALSE")) and \
+            right_val in (TruthValue("TRUE"), TruthValue("FALSE")):
+                return logical_xor(left_val, right_val)
+
+        if node.op == "XNOR":
+            if left_val in (TruthValue("TRUE"), TruthValue("FALSE")) and \
+            right_val in (TruthValue("TRUE"), TruthValue("FALSE")):
+                return logical_xnor(left_val, right_val)
+
+        return TruthValue("UNKNOWN")
+
+    # ----------------------
+    # Helper
+    # ----------------------
+    def contains_predicate(self, expr, target: Predicate):
+        """
+        Recursively check if a predicate is inside a logical expression.
+        """
+        if isinstance(expr, Predicate):
+            return expr == target
+        if isinstance(expr, LogicalOp):
+            return (
+                self.contains_predicate(expr.left, target) or
+                (expr.right and self.contains_predicate(expr.right, target))
+            )
+        return False
