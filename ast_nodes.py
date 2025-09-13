@@ -101,10 +101,10 @@ class Conditional(Node):
         return hash((self.antecedent, self.consequent))
 
 class Quantifier(Node):
-    def __init__(self, quantifier, vars, expr):
+    def __init__(self, quantifier, vars, body):
         self.quantifier = quantifier
         self.vars = vars
-        self.expr = expr
+        self.body = body
 
     def __repr__(self):
         vars_str = ", ".join(str(v) for v in self.vars)
@@ -114,10 +114,10 @@ class Quantifier(Node):
         return (isinstance(other, Quantifier) and
                 self.quantifier == other.quantifier and
                 self.vars == other.vars and
-                self.expr == other.expr)
+                self.body == other.body)
     
     def __hash__(self):
-        return hash((self.quantifier, tuple(self.vars), self.expr))
+        return hash((self.quantifier, tuple(self.vars), self.body))
 
 class Variable(Node):
     def __init__(self, name):
