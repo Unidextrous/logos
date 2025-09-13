@@ -67,6 +67,13 @@ class Interpreter:
             return logical_and(left_val, right_val)
         elif node.op == "OR":
             return logical_or(left_val, right_val)
-        # Add XOR, XNOR, NAND, NOR later as needed
+        if node.op == "NAND":
+            return logical_nand(left_val, right_val)
+        elif node.op == "NOR":
+            return logical_nor(left_val, right_val)
+        if node.op == "XOR":
+            return logical_xor(left_val, right_val)
+        elif node.op == "XNOR":
+            return logical_xnor(left_val, right_val)
         else:
             return TruthValue("UNKNOWN")
