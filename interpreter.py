@@ -104,6 +104,8 @@ class Interpreter:
 
         # 2. Look for logical operators in KB
         for stmt, val in self.kb.items():
+            val = self.evaluate(val)
+            
             if not isinstance(stmt, LogicalOp):
                 continue
 
