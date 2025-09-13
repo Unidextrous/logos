@@ -173,32 +173,7 @@ class Interpreter:
     # LogicalOp inference
     # ----------------------
     def infer_LogicalOp(self, node: LogicalOp):
-        # Try to evaluate using known values of its parts
-        left_val = self.evaluate(node.left) if node.left else None
-        right_val = self.evaluate(node.right) if node.right else None
-
-        if node.op == "NOT":
-            return logical_not(left_val)
-
-        if node.op == "AND":
-            return logical_and(left_val, right_val)
-
-        if node.op == "OR":
-            return logical_or(left_val, right_val)
-
-        if node.op == "NAND":
-            return logical_nand(left_val, right_val)
-
-        if node.op == "NOR":
-            return logical_nor(left_val, right_val)
-        
-        if node.op == "XOR":
-            return logical_xor(left_val, right_val)
-
-        if node.op == "XNOR":
-            return logical_xnor(left_val, right_val)
-
-        return TruthValue("UNKNOWN")
+        return self.eval_LogicalOp(node)
 
     # ----------------------
     # Helper
