@@ -138,42 +138,25 @@ class Interpreter:
         right_val = self.evaluate(node.right) if node.right else None
 
         if node.op == "NOT":
-            if left_val in (TruthValue("TRUE"), TruthValue("FALSE")):
-                return logical_not(left_val)
+            return logical_not(left_val)
 
         if node.op == "AND":
-            if left_val == TruthValue("FALSE") or right_val == TruthValue("FALSE"):
-                return TruthValue("FALSE")
-            if left_val == TruthValue("TRUE") and right_val == TruthValue("TRUE"):
-                return TruthValue("TRUE")
+            return logical_and(left_val, right_val)
 
         if node.op == "OR":
-            if left_val == TruthValue("TRUE") or right_val == TruthValue("TRUE"):
-                return TruthValue("TRUE")
-            if left_val == TruthValue("FALSE") and right_val == TruthValue("FALSE"):
-                return TruthValue("FALSE")
+            return logical_or(left_val, right_val)
 
         if node.op == "NAND":
-            if left_val == TruthValue("TRUE") and right_val == TruthValue("TRUE"):
-                return TruthValue("FALSE")
-            if left_val == TruthValue("FALSE") or right_val == TruthValue("FALSE"):
-                return TruthValue("TRUE")
+            return logical_nand(left_val, right_val)
 
         if node.op == "NOR":
-            if left_val == TruthValue("TRUE") or right_val == TruthValue("TRUE"):
-                return TruthValue("FALSE")
-            if left_val == TruthValue("FALSE") and right_val == TruthValue("FALSE"):
-                return TruthValue("TRUE")
-
+            return logical_nor(left_val, right_val)
+        
         if node.op == "XOR":
-            if left_val in (TruthValue("TRUE"), TruthValue("FALSE")) and \
-            right_val in (TruthValue("TRUE"), TruthValue("FALSE")):
-                return logical_xor(left_val, right_val)
+            return logical_xor(left_val, right_val)
 
         if node.op == "XNOR":
-            if left_val in (TruthValue("TRUE"), TruthValue("FALSE")) and \
-            right_val in (TruthValue("TRUE"), TruthValue("FALSE")):
-                return logical_xnor(left_val, right_val)
+            return logical_xnor(left_val, right_val)
 
         return TruthValue("UNKNOWN")
 
