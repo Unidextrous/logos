@@ -107,15 +107,6 @@ class Interpreter:
             if not isinstance(stmt, LogicalOp):
                 continue
 
-            # AND inference
-            if stmt.op == "AND" and val == TruthValue("TRUE"):
-                if node == stmt.left or node == stmt.right:
-                    return TruthValue("TRUE")
-
-            if stmt.op == "OR" and val == TruthValue("FALSE"):
-                if node == stmt.left or node == stmt.right:
-                    return TruthValue("FALSE")
-
             if stmt.op == "NOT":
                 if stmt.left == node:
                     if val == TruthValue("TRUE"):
@@ -123,7 +114,54 @@ class Interpreter:
                     elif val == TruthValue("FALSE"):
                         return TruthValue("TRUE")
 
-            # TODO: add more (NAND, NOR, XOR, XNOR)
+            if node == stmt.left:
+                other = stmt.right
+            elif node == stmt.right:
+                other = stmt.left
+            
+            other_val = self.evaluate(other)
+
+            if stmt.op == "AND":
+                if node == stmt.left or node == stmt.right:
+                    if val == TruthValue("TRUE"):
+                        return TruthValue("TRUE")
+                    elif val == TruthValue("FALSE") and other_val == TruthValue("TRUE"):
+                        return TruthValue("FALSE")
+
+            if stmt.op == "OR":
+                if node == stmt.left or node == stmt.right:
+                    if val == TruthValue("FALSE"):
+                        return TruthValue("FALSE")
+                    elif val == TruthValue("TRUE") and other_val == TruthValue("FALSE"):
+                        return TruthValue("TRUE")
+                    
+            if stmt.op == "NAND":
+                if node == stmt.left or node == stmt.right:
+                    if val == TruthValue("TRUE"):
+                        return TruthValue("FALSE")
+                    elif val == TruthValue("FALSE") and other_val == TruthValue("FALSE"):
+                        return TruthValue("TRUE")
+
+            if stmt.op == "NOR":
+                if node == stmt.left or node == stmt.right:
+                    if val == TruthValue("TRUE"):
+                        return TruthValue("FALSE")
+                    elif val == TruthValue("FALSE") and other_val == TruthValue("TRUE"):
+                        return TruthValue("FALSE")
+
+            if stmt.op == "XOR":
+                if node == stmt.left or node == stmt.right:
+                    if val == other_val:
+                        return TruthValue("FALSE")
+                    elif val in [TruthValue("TRUE"), TruthValue("FALSE")] and other_val in [TruthValue("TRUE"), TruthValue("FALSE")]:
+                        return TruthValue("TRUE")
+            
+            if stmt.op == "XNOR":
+                if node == stmt.left or node == stmt.right:
+                    if val == other_val:
+                        return TruthValue("TRUE")
+                    elif val in [TruthValue("TRUE"), TruthValue("FALSE")] and other_val in [TruthValue("TRUE"), TruthValue("FALSE")]:
+                        return TruthValue("FALSE")
 
         # 3. Nothing can be inferred
         return TruthValue("UNKNOWN")
