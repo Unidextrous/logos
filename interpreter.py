@@ -104,17 +104,16 @@ class Interpreter:
 
         # 2. Look for logical operators in KB
         for stmt, val in self.kb.items():
-            stmt_val = self.evaluate(val)
-            
             if not isinstance(stmt, LogicalOp):
                 continue
 
-            if stmt.op == "NOT":
-                if stmt.left == node:
-                    if stmt_val == TruthValue("TRUE"):
-                        return TruthValue("FALSE")
-                    elif stmt_val == TruthValue("FALSE"):
-                        return TruthValue("TRUE")
+            stmt_val = self.evaluate(val)
+
+            if stmt.op == "NOT" and stmt.left == node:
+                if stmt_val == TruthValue("TRUE"):
+                    return TruthValue("FALSE")
+                elif stmt_val == TruthValue("FALSE"):
+                    return TruthValue("TRUE")
 
             if node == stmt.left:
                 other = stmt.right
