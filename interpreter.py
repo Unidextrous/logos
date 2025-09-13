@@ -4,6 +4,9 @@ class Interpreter:
     def __init__(self):
         self.kb = {}
 
+    # ----------------------
+    # Core evaluation
+    # ----------------------
     def evaluate(self, node):
         method_name = f"eval_{type(node).__name__}"
         method = getattr(self, method_name, self.generic_eval)
@@ -35,7 +38,9 @@ class Interpreter:
     def eval_Query(self, node: Query):
         """Queries are simple: evaluate the underlying statement."""
         stmt = node.stmt
-        return self.evaluate(stmt)
+        if stmt in self.kb:
+            return self.kb[stmt]
+        return self.infer(stmt)
 
     # ----------------------
     # Predicates
@@ -74,3 +79,39 @@ class Interpreter:
             return logical_xnor(left_val, right_val)
         else:
             return TruthValue("UNKNOWN")
+
+    # ----------------------
+    # Inference dispatcher
+    # ----------------------
+    def infer(self, node):
+        method_name = f"infer_{type(node).__name__}"
+        method = getattr(self, method_name, self.generic_infer)
+        return method(node)
+
+    def generic_infer(self, node):
+        # Default fallback: unknown
+        return TruthValue("UNKNOWN")
+
+    # ----------------------
+    # Logical operation inference
+    # ----------------------
+    def infer_LogicalOp(self, node: LogicalOp):
+        left_val = self.evaluate(node.left)
+
+        if node.op == "NOT":
+            return logical_not(left_val)
+        
+        right_val = self.evaluate(node.right)
+
+        if node.op == "AND":
+            return logical_and(left_val, right_val)
+        elif node.op == "OR":
+            return logical_or(left_val, right_val)
+        if node.op == "NAND":
+            return logical_nand(left_val, right_val)
+        elif node.op == "NOR":
+            return logical_nor(left_val, right_val)
+        elif node.op == "XOR":
+            return logical_xor(left_val, right_val)
+        elif node.op == "XNOR":
+            return logical_xnor(left_val, right_val)
