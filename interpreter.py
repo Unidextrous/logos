@@ -12,67 +12,61 @@ class Interpreter:
     def generic_eval(self, node):
         raise NotImplementedError(f"No eval method for {type(node).__name__}")
 
+    # ----------------------
+    # Truth values
+    # ----------------------
+    def eval_TruthValue(self, node: TruthValue):
+        return node
+
+    # ----------------------
+    # Assignment
+    # ----------------------
     def eval_Assignment(self, node: Assignment):
-        """
-        Handles an assignment of the form `statement = value`.
-        Stores the statement node as the key in the KB.
-        """
-        # The left side is a statement node
         stmt = node.stmt
         value_node = node.value
 
-        # Ensure the value is a TruthValue node
         if not isinstance(value_node, TruthValue):
             raise TypeError("Assignment value must be a TruthValue node")
 
-        # Store the direct assignment in the KB
+        # Store statement node as key in KB
         self.kb[stmt] = value_node
-
-        # Return the assigned value
         return value_node
 
+    # ----------------------
+    # Query
+    # ----------------------
     def eval_Query(self, node: Query):
-        """
-        Evaluate a query statement. Returns a TruthValue.
-        Checks direct KB assignments first, then attempts simple inference.
-        """
+        """Queries are simple: evaluate the underlying statement."""
         stmt = node.stmt
+        return self.evaluate(stmt)
 
-        # 1. Direct match in KB
-        if stmt in self.kb:
-            return self.kb[stmt]
-        
-        # 2. Logical operator
-        if isinstance(stmt, LogicalOp):
-            if stmt.op == "NOT":
-                return logical_not(self.evaluate(stmt.left))
-            elif stmt.op == "AND":
-                return self.infer_from_and(stmt)
-            elif stmt.op == "OR":
-                return self.infer_from_or(stmt)
-
-        # 3. Predicate (single expression)
-        if isinstance(stmt, Predicate):
-            if stmt in self.kb:
-                return self.kb[stmt]
-            return TruthValue("UNKNOWN")
-        
-        # 4. Fallback: unknown
-        return TruthValue("UNKNOWN")
-
+    # ----------------------
+    # Predicates
+    # ----------------------
     def eval_Predicate(self, node: Predicate):
-        # Direct match in KB
+        # Direct lookup
         if node in self.kb:
             return self.kb[node]
-        # Fallback if no known value
-        return TruthValue("UNKNOWN")
-    
-    def infer_from_and(self, stmt: LogicalOp):
-        left_val = self.evaluate(stmt.left)
-        right_val = self.evaluate(stmt.right)
-        return logical_and(left_val, right_val)
 
-    def infer_from_or(self, stmt: LogicalOp):
-        left_val = self.evaluate(stmt.left)
-        right_val = self.evaluate(stmt.right)
-        return logical_or(left_val, right_val)
+        # Inference rules will go here
+        # e.g., check conditionals, universal quantifiers, etc.
+
+        return TruthValue("UNKNOWN")
+
+    # ----------------------
+    # Logical operations
+    # ----------------------
+    def eval_LogicalOp(self, node: LogicalOp):
+        left_val = self.evaluate(node.left)
+        if node.op == "NOT":
+            return logical_not(left_val)
+
+        right_val = self.evaluate(node.right)
+
+        if node.op == "AND":
+            return logical_and(left_val, right_val)
+        elif node.op == "OR":
+            return logical_or(left_val, right_val)
+        # Add XOR, XNOR, NAND, NOR later as needed
+        else:
+            return TruthValue("UNKNOWN")
