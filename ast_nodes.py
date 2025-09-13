@@ -20,19 +20,19 @@ class TruthValue(Node):
         return hash(self.value)
 
 class Assignment(Node):
-    def __init__(self, statement, value):
-        self.statement = statement
+    def __init__(self, stmt, value):
+        self.stmt = stmt
         self.value = value  # True or False
 
     def __repr__(self):
-        return f"{self.statement} = {self.value}"
+        return f"{self.stmt} = {self.value}"
 
 class Query(Node):
-    def __init__(self, statement):
-        self.statement = statement
+    def __init__(self, stmt):
+        self.stmt = stmt
 
     def __repr__(self):
-        return f"{self.statement}?"
+        return f"{self.stmt}?"
 
 class Term(Node):
     def __init__(self, name):
