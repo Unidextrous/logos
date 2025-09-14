@@ -38,17 +38,19 @@ class Interpreter:
     def eval_Query(self, node: Query):
         """Queries are simple: evaluate the underlying statement."""
         
-        # 1. Direct KB lookup
         stmt = node.stmt
-        if stmt in self.kb:
-            return self.evaluate(self.kb[stmt])
 
-        # 2. Evaluate LogicalOp
-        if isinstance(stmt, LogicalOp):
-            return self.eval_LogicalOp(stmt)
-        
-        # 3. Try inference
-        return self.infer(stmt)
+        if isinstance(stmt, Predicate):
+            result = self.eval_Predicate(stmt)
+        elif isinstance(stmt, LogicalOp):
+            result = self.eval_LogicalOp(stmt)
+        else:
+            result = TruthValue("UNKNOWN")
+            inferred = self.infer(stmt, set())
+            if inferred is not None:
+                return inferred
+
+        return result
 
     # ----------------------
     # Predicates
@@ -56,12 +58,10 @@ class Interpreter:
     def eval_Predicate(self, node: Predicate):
         # Direct lookup
         if node in self.kb:
-            return self.kb[node]
+            return self.evaluate(self.kb[node])
 
-        # Inference rules will go here
-        # e.g., check conditionals, universal quantifiers, etc.
-
-        return TruthValue("UNKNOWN")
+        inferred = self.infer(node, set())
+        return inferred if inferred is not None else TruthValue("UNKNOWN")
 
     # ----------------------
     # Logical operations
@@ -91,74 +91,117 @@ class Interpreter:
     # ----------------------
     # Inference dispatcher
     # ----------------------
-    def infer(self, target):
+    def infer(self, target, visited=None):
         """Infer the truth value of the target from the knowledge base."""
+        if visited == None:
+            visited = set()
+
+        if target in visited:
+            return None
+        visited.add(target)
+
         for stmt, val in self.kb.items():
             # Dispatch based on *stmt* not target
             method_name = f"infer_from_{type(stmt).__name__}"
-            method = getattr(self, method_name, self.generic_infer)
-            result = method(stmt, val, target)
+            method = getattr(self, method_name, self.generic_infer_from)
+            result = method(stmt, val, target, visited)
             if result is not None:
+                visited.remove(target)
                 return result
-        return "UNKNOWN"
+        
+        visited.remove(target)
+        return None
 
-    def generic_infer(self, node):
-        # Default fallback: unknown
-        return TruthValue("UNKNOWN")
+    def generic_infer_from(self, node):
+        return None
 
     # ----------------------
     # Predicate inference
     # ----------------------
-    def infer_from_Predicate(self, stmt, val, target):
+    def infer_from_Predicate(self, stmt, val, target, visited):
         if stmt == target:
-            return val
+            return self.evaluate(val)
         return None
 
 
     # ----------------------
     # LogicalOp inference
     # ----------------------
-    def infer_from_LogicalOp(self, stmt, val, target: Node):
+    def infer_from_LogicalOp(self, stmt, val, target, visited):
         """
         Try to infer the truth value of `target` using logical operator
         statements stored in the KB.
         """
-        for stmt, val in self.kb.items():
-            if not isinstance(stmt, LogicalOp):
-                continue
+        if stmt == target:
+            return self.evaluate(val)
+        
+        op = stmt.op
+        
+        if not self.contains_target(stmt, target):
+            return None
+        
+        if target in [stmt.left, stmt.right]:
+            other = stmt.right if target == stmt.left else stmt.left
+            stmt_val = self.evaluate(val)
 
-            # First, try a direct decomposition
-            inferred = self.decompose(stmt, val, target)
-            if inferred is not None:
-                return inferred
+            other_val = self.infer(other, visited)
 
-            # --- Recursive path: maybe stmt implies some sub-target ---
-            # For example, if stmt = (A AND B) AND C = TRUE
-            # and target = A, decompose() might not return directly,
-            # but we know (A AND B) must be TRUE.
-            if stmt.op in {"AND", "OR", "NAND", "NOR", "XOR", "XNOR"}:
-                sub_left = stmt.left
-                sub_right = stmt.right
+            if op == "NOT":
+                return logical_not(stmt_val)
+            if op == "AND":
+                if stmt_val == TruthValue("TRUE"):
+                    return TruthValue("TRUE")
+                elif stmt_val == TruthValue("FALSE") and other_val == TruthValue("TRUE"):
+                    return TruthValue("FALSE")
+            if op == "OR":
+                if stmt_val == TruthValue("FALSE"):
+                    return TruthValue("FALSE")
+                elif stmt_val == TruthValue("TRUE") and other_val == TruthValue("FALSE"):
+                    return TruthValue("TRUE")
+            if op == "NAND":
+                if stmt_val == TruthValue("TRUE"):
+                    return TruthValue("FALSE")
+                elif stmt_val == TruthValue("FALSE") and other_val == TruthValue("FALSE"):
+                    return TruthValue("TRUE")
+            if op == "NOR":
+                if stmt_val == TruthValue("TRUE"):
+                    return TruthValue("FALSE")
+                elif stmt_val == TruthValue("FALSE") and other_val == TruthValue("TRUE"):
+                    return TruthValue("TRUE")
+            if op == "XOR":
+                if other_val is not None:
+                    return logical_xor(stmt_val, other_val)
+                return None
+            if op == "XNOR":
+                if other_val is not None:
+                    return logical_xnor(stmt_val, other_val)
+                return None
+        
+        left_val = self.infer(stmt.left, visited) if not isinstance(stmt.left, TruthValue) else None
+        right_val = self.infer(stmt.right, visited) if not isinstance(stmt.right, TruthValue) else None
 
-                # Check left sub-expression
-                if self.contains_target(sub_left, target):
-                    sub_val = self.infer(sub_left)
-                    if sub_val != TruthValue("UNKNOWN"):
-                        return self.decompose(stmt, sub_val, target)
+        stmt_val = self.evaluate(val)
 
-                # Check right sub-expression
-                if self.contains_target(sub_right, target):
-                    sub_val = self.infer(sub_right)
-                    if sub_val != TruthValue("UNKNOWN"):
-                        return self.decompose(stmt, sub_val, target)
-
-            elif stmt.op == "NOT":
-                if self.contains_target(stmt.left, target):
-                    sub_val = self.infer(stmt.left)
-                    if sub_val != TruthValue("UNKNOWN"):
-                        return self.decompose(stmt, sub_val, target)
-
-        return TruthValue("UNKNOWN")
+        if op == "AND" and stmt_val == TruthValue("TRUE"):
+            if self.contains_target(stmt.left, target):
+                return self.infer(stmt.left, visited)
+            if self.contains_target(stmt.right, target):
+                return self.infer(stmt.right, visited)
+        
+        if isinstance(stmt.left, LogicalOp):
+            result = self.infer_from_LogicalOp(
+                stmt.left, left_val if left_val is not None else TruthValue("UNKNOWN", target, visited)
+            )
+            if result is not None:
+                return result
+        if isinstance(stmt.right, LogicalOp):
+            result = self.infer_from_LogicalOp(
+                stmt.right, right_val if right_val is not None else TruthValue("UNKNOWN", target, visited)
+            )
+            if result is not None:
+                return result
+        
+        return None
 
     # ----------------------
     # Helper Methods
@@ -263,12 +306,11 @@ class Interpreter:
         Recursively check if a predicate is inside a logical expression.
         """
         if expr == target:
-            return TruthValue("TRUE")
+            return True
         
         if isinstance(expr, LogicalOp):
-            if (
-                self.contains_target(expr.left, target) or
+            return (
+                (self.contains_target(expr.left, target)) or
                 (expr.right and self.contains_target(expr.right, target))
-            ):
-                return TruthValue("TRUE")
+            )
         return False
