@@ -181,22 +181,16 @@ class Interpreter:
         right_val = self.infer(stmt.right, visited) if not isinstance(stmt.right, TruthValue) else None
 
         stmt_val = self.evaluate(val)
-
-        if op == "AND" and stmt_val == TruthValue("TRUE"):
-            if self.contains_target(stmt.left, target):
-                return self.infer(stmt.left, visited)
-            if self.contains_target(stmt.right, target):
-                return self.infer(stmt.right, visited)
         
         if isinstance(stmt.left, LogicalOp):
             result = self.infer_from_LogicalOp(
-                stmt.left, left_val if left_val is not None else TruthValue("UNKNOWN", target, visited)
+                stmt.left, left_val if left_val is not None else TruthValue("UNKNOWN"), target, visited
             )
             if result is not None:
                 return result
         if isinstance(stmt.right, LogicalOp):
             result = self.infer_from_LogicalOp(
-                stmt.right, right_val if right_val is not None else TruthValue("UNKNOWN", target, visited)
+                stmt.right, right_val if right_val is not None else TruthValue("UNKNOWN"), target, visited
             )
             if result is not None:
                 return result
