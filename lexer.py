@@ -72,7 +72,7 @@ class Lexer:
         Main entry point: tokenize an input string.
         Returns a list of Token objects.
         """
-        self.text = text
+        self.text = text.upper()
         self.pos = -1
         self.current_char = None
         self.advance()
