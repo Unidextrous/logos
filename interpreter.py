@@ -93,25 +93,18 @@ class Interpreter:
         Handles NOT (unary) and all binary ops (AND, OR, etc.).
         """
         left_val = self.evaluate(node.left)
-        if node.op == "NOT":
-            return logical_not(left_val)
+        
+        # Lookup the operator in the dictionary
+        if node.op not in LOGICAL_OPERATORS:
+            return TruthValue("UNKNOWN")
+
+        func, arity = LOGICAL_OPERATORS[node.op]
+
+        if arity == 1:  # unary operator (NOT)
+            return func(left_val)
 
         right_val = self.evaluate(node.right)
-
-        if node.op == "AND":
-            return logical_and(left_val, right_val)
-        elif node.op == "OR":
-            return logical_or(left_val, right_val)
-        if node.op == "NAND":
-            return logical_nand(left_val, right_val)
-        elif node.op == "NOR":
-            return logical_nor(left_val, right_val)
-        if node.op == "XOR":
-            return logical_xor(left_val, right_val)
-        elif node.op == "XNOR":
-            return logical_xnor(left_val, right_val)
-        else:
-            return TruthValue("UNKNOWN")
+        return func(left_val, right_val)
 
     # ----------------------
     # Inference dispatcher

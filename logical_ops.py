@@ -58,3 +58,16 @@ def logical_xnor(a, b):
     elif (a == TruthValue("TRUE") or b == TruthValue("TRUE")):
         return TruthValue("FALSE")
     return TruthValue("UNKNOWN")
+
+# ------------------------------
+# Operator lookup dictionary
+# ------------------------------
+LOGICAL_OPERATORS = {
+    "NOT":  (logical_not, 1),   # unary operator, takes 1 argument
+    "AND":  (logical_and, 2),   # binary operator, takes 2 arguments
+    "OR":   (logical_or, 2),
+    "NAND": (logical_nand, 2),
+    "NOR":  (logical_nor, 2),
+    "XOR":  (logical_xor, 2),
+    "XNOR": (logical_xnor, 2),
+}
