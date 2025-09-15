@@ -1,5 +1,15 @@
 from .ast_nodes import *
 
+# --------------------------
+# Three-valued logical system
+# --------------------------
+# Each function here takes one or two TruthValue objects
+# (TRUE, FALSE, or UNKNOWN) and returns the logical result
+# as a new TruthValue object.
+#
+# This extends classical Boolean logic to handle UNKNOWN values,
+# which allows reasoning in cases where information is incomplete.
+
 def logical_not(value):
     if value == TruthValue("TRUE"):
         return TruthValue("FALSE")

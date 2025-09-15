@@ -1,30 +1,42 @@
 from .logical_ops import *
 
+# ----------------------
+# Interpreter class
+# ----------------------
 class Interpreter:
     def __init__(self):
+        # Knowledge base: maps statements (Predicates, LogicalOps, etc.)
+        # to their assigned values (TruthValue or other expressions).
         self.kb = {}
 
     # ----------------------
     # Core evaluation
     # ----------------------
     def evaluate(self, node):
+        """Dynamically dispatch evaluation based on node type."""
         method_name = f"eval_{type(node).__name__}"
         method = getattr(self, method_name, self.generic_eval)
         return method(node)
 
     def generic_eval(self, node):
+        """Fallback if no eval method is defined for a node type."""
         raise NotImplementedError(f"No eval method for {type(node).__name__}")
 
     # ----------------------
     # Truth values
     # ----------------------
     def eval_TruthValue(self, node: TruthValue):
+        """Truth values evaluate to themselves."""
         return node
 
     # ----------------------
     # Assignment
     # ----------------------
     def eval_Assignment(self, node: Assignment):
+        """
+        Assign a truth value to a statement and store it in the KB.
+        Example: P(X) = TRUE
+        """
         stmt = node.stmt
         value_node = node.value
 
@@ -36,8 +48,12 @@ class Interpreter:
     # Query
     # ----------------------
     def eval_Query(self, node: Query):
-        """Queries are simple: evaluate the underlying statement."""
-        
+        """
+        Evaluate a query (e.g. `P(X)?`).
+        1. If it's a Predicate or LogicalOp → evaluate directly.
+        2. Otherwise, try inference.
+        3. If unknown, return UNKNOWN.
+        """
         stmt = node.stmt
 
         if isinstance(stmt, Predicate):
@@ -56,7 +72,12 @@ class Interpreter:
     # Predicates
     # ----------------------
     def eval_Predicate(self, node: Predicate):
-        # Direct lookup
+        """
+        Evaluate a predicate.
+        - If found in KB → return stored value.
+        - Otherwise, attempt inference.
+        - If not inferable → UNKNOWN.
+        """
         if node in self.kb:
             return self.evaluate(self.kb[node])
 
@@ -67,6 +88,10 @@ class Interpreter:
     # Logical operations
     # ----------------------
     def eval_LogicalOp(self, node: LogicalOp):
+        """
+        Evaluate logical operators directly.
+        Handles NOT (unary) and all binary ops (AND, OR, etc.).
+        """
         left_val = self.evaluate(node.left)
         if node.op == "NOT":
             return logical_not(left_val)
@@ -92,7 +117,12 @@ class Interpreter:
     # Inference dispatcher
     # ----------------------
     def infer(self, target, visited=None):
-        """Infer the truth value of the target from the knowledge base."""
+        """
+        Attempt to infer the truth value of a target node
+        from the knowledge base.
+        - Uses visited set to prevent infinite recursion.
+        - Dispatches to `infer_from_*` methods depending on stmt type.
+        """
         if visited == None:
             visited = set()
 
@@ -119,6 +149,10 @@ class Interpreter:
     # Predicate inference
     # ----------------------
     def infer_from_Predicate(self, stmt, val, target, visited):
+        """
+        If the target is exactly the predicate in the KB,
+        return its assigned value.
+        """
         if stmt == target:
             return self.evaluate(val)
         return None
@@ -131,21 +165,26 @@ class Interpreter:
         """
         Try to infer the truth value of `target` using logical operator
         statements stored in the KB.
+        - Handles cases where target is part of a logical expression.
+        - Uses decomposition and recursive inference when needed.
         """
         if stmt == target:
             return self.evaluate(val)
         
         op = stmt.op
         
+        # Skip if target isn't part of this expression
         if not self.contains_target(stmt, target):
             return None
         
+        # Directly check if target is one side of the expression
         if target in [stmt.left, stmt.right]:
             other = stmt.right if target == stmt.left else stmt.left
             stmt_val = self.evaluate(val)
 
             other_val = self.infer(other, visited)
 
+            # Handle each logical operator
             if op == "NOT":
                 return logical_not(stmt_val)
             if op == "AND":
@@ -177,6 +216,7 @@ class Interpreter:
                     return logical_xnor(stmt_val, other_val)
                 return None
         
+        # Try recursive inference on sub-expressions
         left_val = self.infer(stmt.left, visited) if not isinstance(stmt.left, TruthValue) else None
         right_val = self.infer(stmt.right, visited) if not isinstance(stmt.right, TruthValue) else None
 
@@ -201,6 +241,11 @@ class Interpreter:
     # Helper Methods
     # ----------------------
     def decompose(self, expr, val, target):
+        """
+        Try to deduce the truth value of a target inside an expression
+        based on the overall expression value.
+        (Used as a fallback when direct inference fails.)
+        """
         if expr == target:
             return val
 
@@ -209,7 +254,7 @@ class Interpreter:
             left = expr.left
             right = expr.right
 
-            # Determine the other side
+            # Determine which side is "other"
             other = None
             if target == left:
                 other = right
@@ -285,7 +330,7 @@ class Interpreter:
                 else:
                     return TruthValue("UNKNOWN")
 
-            # ---- Recursive decomposition for subexpressions ----
+            # Recursive decomposition for nested logical ops
             if self.contains_target(left, target) and val == TruthValue("TRUE"):
                 left_val = self.evaluate(left)
                 return self.decompose(left, left_val, target)
@@ -297,7 +342,8 @@ class Interpreter:
 
     def contains_target(self, expr, target: Node):
         """
-        Recursively check if a predicate is inside a logical expression.
+        Recursively check whether a target node is part of a larger expression.
+        Used to avoid exploring irrelevant branches during inference.
         """
         if expr == target:
             return True

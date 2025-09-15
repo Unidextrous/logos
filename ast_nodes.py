@@ -1,10 +1,23 @@
-# ast_nodes.py
-
+# ----------------------
+# Abstract Syntax Tree (AST) Nodes
+# ----------------------
 class Node:
+    """
+    Base class for all AST nodes.
+    Provides a common type for isinstance checks.
+    """
     pass
 
+# ----------------------
+# Truth Values
+# ----------------------
 class TruthValue(Node):
+    """
+    Represents a logical truth value.
+    Allowed values: TRUE, FALSE, UNKNOWN.
+    """
     def __init__(self, value):
+        # If another TruthValue is passed, unwrap it
         if isinstance(value, TruthValue):
             self.value = value.value
         else:
@@ -19,22 +32,44 @@ class TruthValue(Node):
     def __hash__(self):
         return hash(self.value)
 
+# ----------------------
+# Assignments
+# ----------------------
 class Assignment(Node):
+    """
+    Represents an assignment of a value to a statement.
+    Example: P(X) = TRUE
+    """
     def __init__(self, stmt, value):
-        self.stmt = stmt
-        self.value = value  # True or False
+        self.stmt = stmt    # The left-hand side statement (Predicate, LogicalOp, etc.)
+        self.value = value  # The right-hand side (TruthValue or expression)
 
     def __repr__(self):
         return f"{self.stmt} = {self.value}"
 
+# ----------------------
+# Queries
+# ----------------------
 class Query(Node):
+    """
+    Represents a query asking for the truth of a statement.
+    Example: P(X)?
+    """
     def __init__(self, stmt):
         self.stmt = stmt
 
     def __repr__(self):
         return f"{self.stmt}?"
 
+# ----------------------
+# Terms (variables or constants)
+# ----------------------
 class Term(Node):
+    """
+    Represents a simple term, which can be:
+      - a variable (x, y, etc.)
+      - a constant (Fido, Alice, etc.)
+    """
     def __init__(self, name):
         self.name = name
 
@@ -47,10 +82,17 @@ class Term(Node):
     def __hash__(self):
         return hash(self.name)
 
+# ----------------------
+# Predicates
+# ----------------------
 class Predicate(Node):
+    """
+    Represents an atomic logical predicate with arguments.
+    Example: Likes(Alice, IceCream)
+    """
     def __init__(self, name, args):
-        self.name = name
-        self.args = args
+        self.name = name        # Predicate name
+        self.args = args        # List of Term or Variable nodes
 
     def __repr__(self):
         return f"{self.name}({', '.join(map(str, self.args))})"
@@ -62,12 +104,20 @@ class Predicate(Node):
     
     def __hash__(self):
         return hash((self.name, tuple(self.args)))
-    
+
+# ----------------------
+# Logical Operations
+# ----------------------
 class LogicalOp(Node):
+    """
+    Represents a logical operation such as:
+      - Unary: NOT A
+      - Binary: A AND B, A OR B, etc.
+    """
     def __init__(self, op, left, right=None):
-        self.op = op
-        self.left = left
-        self.right = right
+        self.op = op        # Operator keyword (AND, OR, NOT, etc.)
+        self.left = left    # Left operand (Node)
+        self.right = right  # Right operand (Node) or None for unary ops
 
     def __repr__(self):
         if self.right:
@@ -84,10 +134,17 @@ class LogicalOp(Node):
     def __hash__(self):
         return hash((self.op, self.left, self.right))
 
+# ----------------------
+# Conditionals
+# ----------------------
 class Conditional(Node):
+    """
+    Represents a conditional statement.
+    Example: IF A THEN B
+    """
     def __init__(self, antecedent, consequent):
-        self.antecedent = antecedent
-        self.consequent = consequent
+        self.antecedent = antecedent  # Left side (condition)
+        self.consequent = consequent  # Right side (result)
 
     def __repr__(self):
         return f"IF {self.antecedent} THEN {self.consequent}"
@@ -100,11 +157,18 @@ class Conditional(Node):
     def __hash__(self):
         return hash((self.antecedent, self.consequent))
 
+# ----------------------
+# Quantifiers
+# ----------------------
 class Quantifier(Node):
+    """
+    Represents a quantified expression.
+    Example: FORALL(x, y): Likes(x, y)
+    """
     def __init__(self, quantifier, vars, body):
-        self.quantifier = quantifier
-        self.vars = vars
-        self.body = body
+        self.quantifier = quantifier  # "FORALL" or "EXISTS"
+        self.vars = vars              # Tuple of Variable nodes
+        self.body = body              # Expression inside quantifier
 
     def __repr__(self):
         vars_str = ", ".join(str(v) for v in self.vars)
@@ -119,7 +183,14 @@ class Quantifier(Node):
     def __hash__(self):
         return hash((self.quantifier, tuple(self.vars), self.body))
 
+# ----------------------
+# Variables (distinct from Terms for quantifiers)
+# ----------------------
 class Variable(Node):
+    """
+    Represents a variable (used in quantifiers and predicates).
+    Example: x, y
+    """
     def __init__(self, name):
         self.name = name
 
