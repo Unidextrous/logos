@@ -60,6 +60,9 @@ class Interpreter:
             result = self.eval_Predicate(stmt)
         elif isinstance(stmt, LogicalOp):
             result = self.eval_LogicalOp(stmt)
+        elif isinstance(stmt, Conditional):
+            result = self.eval_Conditional(stmt)
+        
         else:
             result = TruthValue("UNKNOWN")
             inferred = self.infer(stmt, set())
@@ -107,6 +110,27 @@ class Interpreter:
         return func(left_val, right_val)
 
     # ----------------------
+    # Conditionals
+    # ----------------------
+    def eval_Conditional(self, node: Conditional):
+        """
+        Evaluate a conditional IF antecedent THEN consequent.
+        Only returns TRUE/FALSE if the conditional exists in the KB.
+        Otherwise, returns UNKNOWN.
+        """
+        # Check if the exact conditional is in the KB
+        if node in self.kb:
+            return self.evaluate(self.kb[node])
+        
+        # Otherwise, attempt to infer its value
+        inferred = self.infer(node, set())
+        if inferred is not None:
+            return inferred
+
+        # Conditional isn't known → UNKNOWN
+        return TruthValue("UNKNOWN")
+
+    # ----------------------
     # Inference dispatcher
     # ----------------------
     def infer(self, target, visited=None):
@@ -135,7 +159,7 @@ class Interpreter:
         visited.remove(target)
         return None
 
-    def generic_infer_from(self, node):
+    def generic_infer_from(self, stmt, val=None, target=None, visited=None):
         return None
 
     # ----------------------
@@ -229,6 +253,56 @@ class Interpreter:
                 return result
         
         return None
+
+    # ----------------------
+    # Conditional inference
+    # ----------------------
+    def infer_from_Conditional(self, stmt, val, target, visited):
+        """
+        stmt: Conditional node (IF antecedent THEN consequent)
+        val: TruthValue of the conditional itself (TRUE/FALSE)
+        target: The node we are trying to infer
+        visited: Set of already visited nodes to avoid cycles
+        """
+        antecedent = stmt.antecedent
+        consequent = stmt.consequent
+
+        # Case 1: target is the conditional itself
+        if stmt == target:
+            return self.evaluate(val)
+
+        # Case 2: target is the consequent
+        if target == consequent:
+            # If conditional is TRUE and antecedent is TRUE → consequent must be TRUE
+            antecedent_val = self.infer(antecedent, visited)
+            if val == TruthValue("TRUE") and antecedent_val == TruthValue("TRUE"):
+                return TruthValue("TRUE")
+            # If conditional is FALSE and antecedent is TRUE → consequent must be FALSE
+            if val == TruthValue("FALSE") and antecedent_val == TruthValue("TRUE"):
+                return TruthValue("FALSE")
+        
+        # Case 3: target is the antecedent
+        if target == antecedent:
+            consequent_val = self.infer(consequent, visited)
+            # Modus tollens: IF A THEN B = TRUE, B = FALSE → A = FALSE
+            if val == TruthValue("TRUE") and consequent_val == TruthValue("FALSE"):
+                return TruthValue("FALSE")
+            # Rare case: IF A THEN B = FALSE, B = TRUE → A = TRUE (less common)
+            if val == TruthValue("FALSE") and consequent_val == TruthValue("TRUE"):
+                return TruthValue("TRUE")
+        
+        # Recursively try to infer inside nested expressions
+        if isinstance(antecedent, LogicalOp) or isinstance(antecedent, Conditional):
+            result = self.infer(antecedent, visited)
+            if result is not None:
+                return result
+        if isinstance(consequent, LogicalOp) or isinstance(consequent, Conditional):
+            result = self.infer(consequent, visited)
+            if result is not None:
+                return result
+
+        return None
+
 
     # ----------------------
     # Helper Methods

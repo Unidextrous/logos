@@ -172,7 +172,7 @@ class Quantifier(Node):
 
     def __repr__(self):
         vars_str = ", ".join(str(v) for v in self.vars)
-        return f"{self.quantifier}({vars_str}): {self.expr}"
+        return f"{self.quantifier}({vars_str}): {self.body}"
     
     def __eq__(self, other):
         return (isinstance(other, Quantifier) and
