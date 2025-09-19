@@ -62,6 +62,8 @@ class Interpreter:
             result = self.eval_LogicalOp(stmt)
         elif isinstance(stmt, Conditional):
             result = self.eval_Conditional(stmt)
+        elif isinstance(stmt, Quantifier):
+            result = self.eval_Quantifier(stmt)
         
         else:
             result = TruthValue("UNKNOWN")
@@ -128,6 +130,60 @@ class Interpreter:
             return inferred
 
         # Conditional isn't known → UNKNOWN
+        return TruthValue("UNKNOWN")
+
+    # ----------------------
+    # Quantifiers
+    # ----------------------
+    def eval_Quantifier(self, node: Quantifier):
+        if not isinstance(node.body, Predicate):
+            return TruthValue("UNKNOWN")
+
+        relevant_kb = [
+            (kb_stmt, self.evaluate(val))
+            for kb_stmt, val in self.kb.items()
+            if isinstance(kb_stmt, Predicate)
+            and kb_stmt.name == node.body.name
+            and len(kb_stmt.args) == len(node.body.args)
+        ]
+
+        if node.quantifier == "FORALL":
+            if not relevant_kb:
+                return TruthValue("UNKNOWN")
+
+            for kb_stmt, val in relevant_kb:
+                # Build a variable mapping: X -> EXAMPLE
+                var_map = {}
+                for var, arg_q, arg_kb in zip(node.vars, node.body.args, kb_stmt.args):
+                    var_map[arg_q] = arg_kb
+
+                # Instantiate quantifier body
+                instantiated_body = Predicate(
+                    node.body.name,
+                    [var_map.get(arg, arg) for arg in node.body.args]
+                )
+
+                if instantiated_body == kb_stmt:
+                    if val == TruthValue("FALSE"):
+                        return TruthValue("FALSE")
+
+        elif node.quantifier == "EXISTS":
+            if not relevant_kb:
+                return TruthValue("UNKNOWN")
+
+            for kb_stmt, val in relevant_kb:
+                var_map = {}
+                for var, arg_q, arg_kb in zip(node.vars, node.body.args, kb_stmt.args):
+                    var_map[arg_q] = arg_kb
+
+                instantiated_body = Predicate(
+                    node.body.name,
+                    [var_map.get(arg, arg) for arg in node.body.args]
+                )
+
+                if instantiated_body == kb_stmt and val == TruthValue("TRUE"):
+                    return TruthValue("TRUE")
+
         return TruthValue("UNKNOWN")
 
     # ----------------------
@@ -420,4 +476,42 @@ class Interpreter:
                 (self.contains_target(expr.left, target)) or
                 (expr.right and self.contains_target(expr.right, target))
             )
+        return False
+
+    def matches_quantifier(self, quant_body, kb_stmt, vars):
+        """
+        Check if kb_stmt matches the quantified body under some variable substitution.
+        quant_body: the body of the quantifier, e.g., P(X)
+        kb_stmt: statement from the KB, e.g., P(EXAMPLE)
+        vars: list of quantified variable names, e.g., ['X']
+        """
+        # Only handle simple predicates for now
+        if isinstance(quant_body, Predicate) and isinstance(kb_stmt, Predicate):
+            if quant_body.name != kb_stmt.name:
+                return False
+            if len(quant_body.args) != len(kb_stmt.args):
+                return False
+
+            # Build a mapping from quantified variables → KB values
+            var_map = {}
+            for var, arg in zip(vars, quant_body.args):
+                # Only map variables, not constants
+                if arg in vars:
+                    var_map[arg] = None  # initialize
+            for var, arg_q, arg_kb in zip(vars, quant_body.args, kb_stmt.args):
+                if arg_q in vars:
+                    # If variable hasn't been mapped yet, map it
+                    if var_map[arg_q] is None:
+                        var_map[arg_q] = arg_kb
+                    else:
+                        # Must be consistent
+                        if var_map[arg_q] != arg_kb:
+                            return False
+                else:
+                    # Non-variable arguments must match exactly
+                    if arg_q != arg_kb:
+                        return False
+            return True
+
+        # TODO: Extend for LogicalOp, Conditional, etc.
         return False
