@@ -167,6 +167,14 @@ class Conditional(Node):
         self.antecedent = antecedent  # Left side (condition)
         self.consequent = consequent  # Right side (result)
 
+    def substitute(self, subst: dict):
+        """
+        Return a copy of this conditional with variables replaced according to subst.
+        """
+        new_antecedent = self.antecedent.substitute(subst) if hasattr(self.antecedent, "substitute") else self.antecedent
+        new_consequent = self.consequent.substitute(subst) if hasattr(self.consequent, "substitute") else self.consequent
+        return Conditional(new_antecedent, new_consequent)
+
     def __repr__(self):
         return f"IF {self.antecedent} THEN {self.consequent}"
     
