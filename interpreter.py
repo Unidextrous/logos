@@ -144,10 +144,7 @@ class Interpreter:
         # Collect all constants from KB (for all variables)
         constants = set()
         for stmt in self.kb:
-            if isinstance(stmt, Predicate):
-                for arg in stmt.args:
-                    if isinstance(arg, Term):
-                        constants.add(arg)
+            constants.update(self._extract_terms(stmt))
 
         if not constants:
             return TruthValue("UNKNOWN")
@@ -455,3 +452,19 @@ class Interpreter:
                 (expr.right and self.contains_target(expr.right, target))
             )
         return False
+
+    def _extract_terms(self, node):
+        """Recursively collect Term objects from any node."""
+        terms = set()
+        if isinstance(node, Predicate):
+            for arg in node.args:
+                if isinstance(arg, Term):
+                    terms.add(arg)
+        elif isinstance(node, LogicalOp):
+            terms.update(self._extract_terms(node.left))
+            if node.right:
+                terms.update(self._extract_terms(node.right))
+        elif isinstance(node, Conditional):
+            terms.update(self._extract_terms(node.antecedent))
+            terms.update(self._extract_terms(node.consequent))
+        return terms
