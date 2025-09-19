@@ -136,32 +136,47 @@ class Interpreter:
     # Quantifiers
     # ----------------------
     def eval_Quantifier(self, node: Quantifier):
-        """
-        Evaluate quantifier:
-        - FORALL: TRUE only if explicitly in KB, FALSE if any instance evaluates to FALSE, else UNKNOWN.
-        - EXISTS: FALSE only if explicitly in KB, TRUE if any instance evaluates to TRUE, else UNKNOWN.
-        """
-        # 1. Explicit assignment wins
+        """Evaluate quantifier with inference."""
+        # Explicit assignment
         if node in self.kb:
             return self.evaluate(self.kb[node])
 
-        for kb_stmt in self.kb:
-            subst = self.matches_quantifier(node.body, kb_stmt, node.vars)
-            if subst is None:
-                continue
+        # Collect all constants known in KB for the variables
+        constants = set()
+        for stmt in self.kb:
+            if isinstance(stmt, Predicate):
+                for arg in stmt.args:
+                    if isinstance(arg, Term):
+                        constants.add(arg)
 
-            # Apply substitution to the body
+        if not constants:
+            return TruthValue("UNKNOWN")
+
+        # Track results
+        any_true = False
+        any_false = False
+
+        for const in constants:
+            # Generate substitution dict for the variable(s)
+            subst = {v.name: const for v in node.vars}
             body_instance = node.body.substitute(subst)
-            evaluated_val = self.evaluate(body_instance)
+            val = self.evaluate(body_instance)
 
-            if node.quantifier == "FORALL" and evaluated_val == TruthValue("FALSE"):
+            if val == TruthValue("TRUE"):
+                any_true = True
+            elif val == TruthValue("FALSE"):
+                any_false = True
+
+            if node.quantifier == "FORALL" and val == TruthValue("FALSE"):
                 return TruthValue("FALSE")
-            if node.quantifier == "EXISTS" and evaluated_val == TruthValue("TRUE"):
+            if node.quantifier == "EXISTS" and val == TruthValue("TRUE"):
                 return TruthValue("TRUE")
 
-        # If no explicit TRUE/FALSE triggered
-        return TruthValue("UNKNOWN")
-
+        # Decide UNKNOWN/TRUE/FALSE
+        if node.quantifier == "FORALL":
+            return TruthValue("TRUE") if any_false == False else TruthValue("UNKNOWN")
+        elif node.quantifier == "EXISTS":
+            return TruthValue("FALSE") if any_true == False else TruthValue("UNKNOWN")
 
     # ----------------------
     # Inference dispatcher

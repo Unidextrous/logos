@@ -94,6 +94,16 @@ class Predicate(Node):
         self.name = name        # Predicate name
         self.args = args        # List of Term or Variable nodes
 
+    def substitute(self, subst: dict):
+        """Return a copy of this predicate with variables replaced by subst."""
+        new_args = []
+        for arg in self.args:
+            if isinstance(arg, Term) and arg.name in subst:
+                new_args.append(subst[arg.name])
+            else:
+                new_args.append(arg)
+        return Predicate(self.name, new_args)
+
     def __repr__(self):
         return f"{self.name}({', '.join(map(str, self.args))})"
     
@@ -119,6 +129,17 @@ class LogicalOp(Node):
         self.left = left    # Left operand (Node)
         self.right = right  # Right operand (Node) or None for unary ops
 
+    def substitute(self, subst: dict):
+        """
+        Return a copy of this LogicalOp with variables replaced according to subst.
+        Works recursively on left and right subnodes.
+        """
+        # Substitute left side
+        new_left = self.left.substitute(subst) if hasattr(self.left, "substitute") else self.left
+        # Substitute right side (if binary)
+        new_right = self.right.substitute(subst) if (self.right and hasattr(self.right, "substitute")) else self.right
+        return LogicalOp(self.op, new_left, new_right)
+    
     def __repr__(self):
         if self.right:
             return f"({self.left} {self.op} {self.right})"
