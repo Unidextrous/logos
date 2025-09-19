@@ -141,36 +141,37 @@ class Interpreter:
     # Quantifiers
     # ----------------------
     def eval_Quantifier(self, node: Quantifier):
-        """Evaluate quantifier with multiple variables, including conditionals."""
-        # Explicit assignment in KB
+        """
+        Evaluate quantifiers (multi-variable + nested) strictly via KB.
+        TRUE/FALSE only if explicitly stated in KB or inferable.
+        """
+        # Check for explicit KB assignment
         if node in self.kb:
             return self.evaluate(self.kb[node])
 
-        # Collect all constants from KB
+        # Collect constants from KB
         constants = set()
         for stmt in self.kb:
             constants.update(self._extract_terms(stmt))
-
         if not constants:
             return TruthValue("UNKNOWN")
 
-        # Generate all combinations of constants for all variables
-        all_combinations = product(constants, repeat=len(node.vars))
+        from itertools import product
+        var_names = [v.name for v in node.vars]
+        all_combinations = product(constants, repeat=len(var_names))
 
         for combination in all_combinations:
-            # Map each variable to a constant
-            subst = {v.name: c for v, c in zip(node.vars, combination)}
-            # Substitute variables in the body
+            subst = dict(zip(var_names, combination))
             body_instance = node.body.substitute(subst)
             val = self.evaluate(body_instance)
 
-            # Short-circuit evaluation
+            # Short-circuit only for explicit TRUE/FALSE
             if node.quantifier == "FORALL" and val == TruthValue("FALSE"):
                 return TruthValue("FALSE")
             if node.quantifier == "EXISTS" and val == TruthValue("TRUE"):
                 return TruthValue("TRUE")
 
-        # If no combination produced a definitive value
+        # Nothing decisive in KB → return UNKNOWN
         return TruthValue("UNKNOWN")
 
     # ----------------------
