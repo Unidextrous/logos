@@ -97,6 +97,10 @@ class Interpreter:
         Evaluate logical operators directly.
         Handles NOT (unary) and all binary ops (AND, OR, etc.).
         """
+        # Check if the exact expression is stored in the KB
+        if node in self.kb:
+            return self.evaluate(self.kb[node])
+        
         left_val = self.evaluate(node.left)
         
         # Lookup the operator in the dictionary
