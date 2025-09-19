@@ -136,55 +136,32 @@ class Interpreter:
     # Quantifiers
     # ----------------------
     def eval_Quantifier(self, node: Quantifier):
-        if not isinstance(node.body, Predicate):
-            return TruthValue("UNKNOWN")
+        """
+        Evaluate quantifier:
+        - FORALL: TRUE only if explicitly in KB, FALSE if any instance evaluates to FALSE, else UNKNOWN.
+        - EXISTS: FALSE only if explicitly in KB, TRUE if any instance evaluates to TRUE, else UNKNOWN.
+        """
+        # 1. Explicit assignment wins
+        if node in self.kb:
+            return self.evaluate(self.kb[node])
 
-        relevant_kb = [
-            (kb_stmt, self.evaluate(val))
-            for kb_stmt, val in self.kb.items()
-            if isinstance(kb_stmt, Predicate)
-            and kb_stmt.name == node.body.name
-            and len(kb_stmt.args) == len(node.body.args)
-        ]
+        for kb_stmt in self.kb:
+            subst = self.matches_quantifier(node.body, kb_stmt, node.vars)
+            if subst is None:
+                continue
 
-        if node.quantifier == "FORALL":
-            if not relevant_kb:
-                return TruthValue("UNKNOWN")
+            # Apply substitution to the body
+            body_instance = node.body.substitute(subst)
+            evaluated_val = self.evaluate(body_instance)
 
-            for kb_stmt, val in relevant_kb:
-                # Build a variable mapping: X -> EXAMPLE
-                var_map = {}
-                for var, arg_q, arg_kb in zip(node.vars, node.body.args, kb_stmt.args):
-                    var_map[arg_q] = arg_kb
+            if node.quantifier == "FORALL" and evaluated_val == TruthValue("FALSE"):
+                return TruthValue("FALSE")
+            if node.quantifier == "EXISTS" and evaluated_val == TruthValue("TRUE"):
+                return TruthValue("TRUE")
 
-                # Instantiate quantifier body
-                instantiated_body = Predicate(
-                    node.body.name,
-                    [var_map.get(arg, arg) for arg in node.body.args]
-                )
-
-                if instantiated_body == kb_stmt:
-                    if val == TruthValue("FALSE"):
-                        return TruthValue("FALSE")
-
-        elif node.quantifier == "EXISTS":
-            if not relevant_kb:
-                return TruthValue("UNKNOWN")
-
-            for kb_stmt, val in relevant_kb:
-                var_map = {}
-                for var, arg_q, arg_kb in zip(node.vars, node.body.args, kb_stmt.args):
-                    var_map[arg_q] = arg_kb
-
-                instantiated_body = Predicate(
-                    node.body.name,
-                    [var_map.get(arg, arg) for arg in node.body.args]
-                )
-
-                if instantiated_body == kb_stmt and val == TruthValue("TRUE"):
-                    return TruthValue("TRUE")
-
+        # If no explicit TRUE/FALSE triggered
         return TruthValue("UNKNOWN")
+
 
     # ----------------------
     # Inference dispatcher
@@ -359,7 +336,6 @@ class Interpreter:
 
         return None
 
-
     # ----------------------
     # Helper Methods
     # ----------------------
@@ -478,40 +454,91 @@ class Interpreter:
             )
         return False
 
-    def matches_quantifier(self, quant_body, kb_stmt, vars):
+    def matches_quantifier(self, quant_body, kb_stmt, vars, subst=None):
         """
-        Check if kb_stmt matches the quantified body under some variable substitution.
-        quant_body: the body of the quantifier, e.g., P(X)
-        kb_stmt: statement from the KB, e.g., P(EXAMPLE)
-        vars: list of quantified variable names, e.g., ['X']
+        Check whether kb_stmt can be obtained from quant_body by substituting
+        the quantified variables (vars). Returns a substitution dict on match,
+        or None if no match.
+
+        vars: tuple/list of Variable nodes (e.g. (Variable('X'), ...))
+        subst: carry-through substitution dict used during recursion
         """
-        # Only handle simple predicates for now
+        if subst is None:
+            subst = {}
+
+        # variable name set for quick checks (vars may be Variable objects)
+        var_names = {v.name if hasattr(v, "name") else v for v in vars}
+
+        # ---- Predicates ----
         if isinstance(quant_body, Predicate) and isinstance(kb_stmt, Predicate):
-            if quant_body.name != kb_stmt.name:
-                return False
-            if len(quant_body.args) != len(kb_stmt.args):
-                return False
+            if quant_body.name != kb_stmt.name or len(quant_body.args) != len(kb_stmt.args):
+                return None
 
-            # Build a mapping from quantified variables → KB values
-            var_map = {}
-            for var, arg in zip(vars, quant_body.args):
-                # Only map variables, not constants
-                if arg in vars:
-                    var_map[arg] = None  # initialize
-            for var, arg_q, arg_kb in zip(vars, quant_body.args, kb_stmt.args):
-                if arg_q in vars:
-                    # If variable hasn't been mapped yet, map it
-                    if var_map[arg_q] is None:
-                        var_map[arg_q] = arg_kb
+            local = subst.copy()
+
+            for q_arg, kb_arg in zip(quant_body.args, kb_stmt.args):
+                # If q_arg is itself a complex node, recurse
+                if not isinstance(q_arg, Term):
+                    sub_res = self.matches_quantifier(q_arg, kb_arg, vars, local)
+                    if sub_res is None:
+                        return None
+                    # merge substitutions (check consistency)
+                    for k, v in sub_res.items():
+                        if k in local and local[k] != v:
+                            return None
+                        local[k] = v
+                    continue
+
+                # q_arg is a Term (identifier). If its name is a quantified var,
+                # treat it as variable to be bound; otherwise it must match exactly.
+                q_name = q_arg.name
+                if q_name in var_names:
+                    existing = local.get(q_name)
+                    if existing is None:
+                        local[q_name] = kb_arg
                     else:
-                        # Must be consistent
-                        if var_map[arg_q] != arg_kb:
-                            return False
+                        if existing != kb_arg:
+                            return None  # conflicting mapping
                 else:
-                    # Non-variable arguments must match exactly
-                    if arg_q != arg_kb:
-                        return False
-            return True
+                    # non-variable term: must match exactly
+                    if not isinstance(kb_arg, Term) or q_name != kb_arg.name:
+                        return None
 
-        # TODO: Extend for LogicalOp, Conditional, etc.
-        return False
+            return local
+
+        # ---- LogicalOp ----
+        if isinstance(quant_body, LogicalOp) and isinstance(kb_stmt, LogicalOp):
+            if quant_body.op != kb_stmt.op:
+                return None
+
+            # Unary (NOT)
+            if quant_body.right is None:
+                return self.matches_quantifier(quant_body.left, kb_stmt.left, vars, subst)
+
+            # Binary ops
+            commutative_ops = {"AND", "OR", "XOR", "XNOR"}
+            if quant_body.op in commutative_ops:
+                # Try (left→left, right→right)
+                left_first = self.matches_quantifier(quant_body.left, kb_stmt.left, vars, subst)
+                if left_first is not None:
+                    right_first = self.matches_quantifier(quant_body.right, kb_stmt.right, vars, left_first)
+                    if right_first is not None:
+                        return right_first
+
+                # Try swapped (left→right, right→left)
+                left_swapped = self.matches_quantifier(quant_body.left, kb_stmt.right, vars, subst)
+                if left_swapped is not None:
+                    right_swapped = self.matches_quantifier(quant_body.right, kb_stmt.left, vars, left_swapped)
+                    if right_swapped is not None:
+                        return right_swapped
+
+                return None
+            else:
+                # Non-commutative: must match in order
+                left_subst = self.matches_quantifier(quant_body.left, kb_stmt.left, vars, subst)
+                if left_subst is None:
+                    return None
+                return self.matches_quantifier(quant_body.right, kb_stmt.right, vars, left_subst)
+
+        # Not supported yet (Conditionals, Quantifiers nested, etc.)
+        return None

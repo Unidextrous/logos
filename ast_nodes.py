@@ -172,59 +172,13 @@ class Quantifier(Node):
 
     def __repr__(self):
         vars_str = ", ".join(str(v) for v in self.vars)
-        return f"{self.quantifier}({vars_str}): {self.body}"
+        return f"{self.quantifier}({vars_str}): {self.expr}"
     
     def __eq__(self, other):
-        if not isinstance(other, Quantifier):
-            return False
-        if self.quantifier != other.quantifier:
-            return False
-        if len(self.vars) != len(other.vars):
-            return False
-
-        # Map self.vars → other.vars
-        var_map = dict(zip(self.vars, other.vars))
-        
-        # Recursively check if bodies are equivalent under this mapping
-        return self.alpha_eq(self.body, other.body, var_map)
-
-    def alpha_eq(self, node1, node2, var_map):
-        """
-        Check if two nodes are equivalent under a variable mapping.
-        """
-        # If they are the exact same object
-        if node1 == node2:
-            return True
-
-        # If both are predicates
-        if isinstance(node1, Predicate) and isinstance(node2, Predicate):
-            if node1.name != node2.name or len(node1.args) != len(node2.args):
-                return False
-            # Check if each argument maps correctly
-            for arg1, arg2 in zip(node1.args, node2.args):
-                if arg1 in var_map:
-                    if var_map[arg1] != arg2:
-                        return False
-                else:
-                    if arg1 != arg2:
-                        return False
-            return True
-
-        # If both are logical operators
-        if isinstance(node1, LogicalOp) and isinstance(node2, LogicalOp):
-            if node1.op != node2.op:
-                return False
-            return (self.alpha_eq(node1.left, node2.left, var_map) and
-                    self.alpha_eq(node1.right, node2.right, var_map))
-
-        # If both are conditionals
-        if isinstance(node1, Conditional) and isinstance(node2, Conditional):
-            return (self.alpha_eq(node1.antecedent, node2.antecedent, var_map) and
-                    self.alpha_eq(node1.consequent, node2.consequent, var_map))
-
-        # Otherwise, not equivalent
-        return False
-
+        return (isinstance(other, Quantifier) and
+                self.quantifier == other.quantifier and
+                self.vars == other.vars and
+                self.body == other.body)
     
     def __hash__(self):
         return hash((self.quantifier, tuple(self.vars), self.body))
