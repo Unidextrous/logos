@@ -148,6 +148,11 @@ class Interpreter:
         # Check for explicit KB assignment
         if node in self.kb:
             return self.evaluate(self.kb[node])
+        
+        # Try inferrence
+        inferred = self.infer(node, set())
+        if inferred is not None:
+            return inferred
 
         # Collect constants from KB
         constants = set()
@@ -344,6 +349,37 @@ class Interpreter:
             result = self.infer(consequent, visited)
             if result is not None:
                 return result
+
+        return None
+
+    def infer_from_Quantifier(self, stmt: Quantifier, val, target, visited):
+        """
+        Attempt to infer the truth value of a quantifier.
+        Only returns TRUE/FALSE if all (FORALL) or some (EXISTS) instantiations are TRUE/FALSE in KB.
+        """
+        if stmt == target:
+            return self.evaluate(val)
+
+        # Collect constants from KB
+        constants = set()
+        for s in self.kb:
+            constants.update(self._extract_terms(s))
+        if not constants:
+            return None
+
+        from itertools import product
+        var_names = [v.name for v in stmt.vars]
+        all_combinations = product(constants, repeat=len(var_names))
+
+        # Evaluate each instantiation
+        for combination in all_combinations:
+            subst = dict(zip(var_names, combination))
+            body_instance = stmt.body.substitute(subst)
+            body_val = self.infer(body_instance, visited)
+            if stmt.quantifier == "FORALL" and body_val == TruthValue("FALSE"):
+                return TruthValue("FALSE")
+            if stmt.quantifier == "EXISTS" and body_val == TruthValue("TRUE"):
+                return TruthValue("TRUE")
 
         return None
 
