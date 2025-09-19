@@ -1,4 +1,5 @@
 from .logical_ops import *
+from itertools import product
 
 # ----------------------
 # Interpreter class
@@ -140,12 +141,12 @@ class Interpreter:
     # Quantifiers
     # ----------------------
     def eval_Quantifier(self, node: Quantifier):
-        """Evaluate quantifier with inference, including conditionals."""
+        """Evaluate quantifier with multiple variables, including conditionals."""
         # Explicit assignment in KB
         if node in self.kb:
             return self.evaluate(self.kb[node])
 
-        # Collect all constants from KB (for all variables)
+        # Collect all constants from KB
         constants = set()
         for stmt in self.kb:
             constants.update(self._extract_terms(stmt))
@@ -153,17 +154,23 @@ class Interpreter:
         if not constants:
             return TruthValue("UNKNOWN")
 
-        for const in constants:
-            # Substitute variables with constant
-            subst = {v.name: const for v in node.vars}
-            body_instance = node.body.substitute(subst)  # works for Conditionals too
-            val = self.evaluate(body_instance)  # dispatches to eval_Conditional if needed
+        # Generate all combinations of constants for all variables
+        all_combinations = product(constants, repeat=len(node.vars))
 
+        for combination in all_combinations:
+            # Map each variable to a constant
+            subst = {v.name: c for v, c in zip(node.vars, combination)}
+            # Substitute variables in the body
+            body_instance = node.body.substitute(subst)
+            val = self.evaluate(body_instance)
+
+            # Short-circuit evaluation
             if node.quantifier == "FORALL" and val == TruthValue("FALSE"):
                 return TruthValue("FALSE")
             if node.quantifier == "EXISTS" and val == TruthValue("TRUE"):
                 return TruthValue("TRUE")
 
+        # If no combination produced a definitive value
         return TruthValue("UNKNOWN")
 
     # ----------------------
