@@ -63,8 +63,10 @@ class Interpreter:
             result = self.eval_LogicalOp(stmt)
         elif isinstance(stmt, Conditional):
             result = self.eval_Conditional(stmt)
-        elif isinstance(stmt, Quantifier):
-            result = self.eval_Quantifier(stmt)
+        # Check KB for equivalent quantifiers
+        for kb_stmt in self.kb:
+            if isinstance(kb_stmt, Quantifier) and self.quantifiers_equivalent(kb_stmt, node):
+                return self.evaluate(self.kb[kb_stmt])
         
         else:
             result = TruthValue("UNKNOWN")
@@ -145,9 +147,10 @@ class Interpreter:
         Evaluate quantifiers (multi-variable + nested) strictly via KB.
         TRUE/FALSE only if explicitly stated in KB or inferable.
         """
-        # Check for explicit KB assignment
-        if node in self.kb:
-            return self.evaluate(self.kb[node])
+        # Check KB for equivalent quantifiers
+        for kb_stmt in self.kb:
+            if isinstance(kb_stmt, Quantifier) and self.quantifiers_equivalent(kb_stmt, node):
+                return self.evaluate(self.kb[kb_stmt])
         
         # Try inferrence
         inferred = self.infer(node, set())
@@ -357,7 +360,9 @@ class Interpreter:
         Attempt to infer the truth value of a quantifier.
         Only returns TRUE/FALSE if all (FORALL) or some (EXISTS) instantiations are TRUE/FALSE in KB.
         """
-        if stmt == target:
+        if (stmt == target or 
+            (isinstance(stmt, Quantifier) and isinstance(target, Quantifier) and 
+            self.quantifiers_equivalent(stmt, target))):
             return self.evaluate(val)
 
         # Collect constants from KB
@@ -516,3 +521,18 @@ class Interpreter:
             terms.update(self._extract_terms(node.antecedent))
             terms.update(self._extract_terms(node.consequent))
         return terms
+
+    def quantifiers_equivalent(self, q1: Quantifier, q2: Quantifier) -> bool:
+        """Check if two quantifiers are equivalent up to renaming of bound variables."""
+        if not isinstance(q1, Quantifier) or not isinstance(q2, Quantifier):
+            return False
+        if q1.quantifier != q2.quantifier:
+            return False
+        if len(q1.vars) != len(q2.vars):
+            return False
+
+        # Build substitution: q1.vars → q2.vars
+        subst = {v1.name: Term(v2.name) for v1, v2 in zip(q1.vars, q2.vars)}
+
+        # Compare bodies after substitution
+        return q1.body.substitute(subst) == q2.body
