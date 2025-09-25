@@ -9,8 +9,7 @@ class Parser:
     Converts a list of tokens into an Abstract Syntax Tree (AST).
     Supports:
       - Quantifiers (FORALL, EXISTS)
-      - Conditionals (IF ... THEN ...)
-      - Logical operations (AND, OR, NOT, NAND, NOR, XOR, XNOR)
+      - Logical operations (AND, OR, NOT, NAND, NOR, XOR, XNOR, IMPLIES, IFF)
       - Assignments and queries
       - Predicates and terms
     """
@@ -58,7 +57,6 @@ class Parser:
         """
         Parse a "statement", which could be:
           - a quantified expression (FORALL/EXISTS)
-          - a conditional (IF ... THEN ...)
           - a logical expression
         Also handles:
           - Assignments (expr = value)
@@ -68,9 +66,6 @@ class Parser:
         # Quantifier
         if self.current_tok.type == TT_KEYWORD and self.current_tok.value in ("FORALL", "EXISTS"):
             expr_node = self.quantified()
-        # Conditional
-        elif self.current_tok.type == TT_KEYWORD and self.current_tok.value == "IF":
-            expr_node = self.conditional()
         # General logical expression
         else:
             expr_node = self.expr()
@@ -98,11 +93,29 @@ class Parser:
     # ----------------------
     def expr(self):
         """Top-level expression parser entry point: XNOR is lowest precedence."""
-        return self.parse_xnor()
+        return self.parse_iff()
 
     # Each of the following parse_* methods implements precedence climbing.
     # Higher-precedence operations are parsed first.
-    # NOT > AND > OR > NAND > NOR > XOR > XNOR
+    # NOT > AND > OR > NAND > NOR > XOR > XNOR > IFF
+    def parse_iff(self):
+        left = self.parse_implies()
+        while self.current_tok and self.current_tok.type == TT_KEYWORD and self.current_tok.value == "IFF":
+            op = self.current_tok.value
+            self.advance()
+            right = self.parse_implies()
+            left = LogicalOp(op, left, right)
+        return left
+    
+    def parse_implies(self):
+        left = self.parse_xnor()
+        while self.current_tok and self.current_tok.type == TT_KEYWORD and self.current_tok.value == "IMPLIES":
+            op = self.current_tok.value
+            self.advance()
+            right = self.parse_xnor()
+            left = LogicalOp(op, left, right)
+        return left
+
     def parse_xnor(self):
         left = self.parse_xor()
         while self.current_tok and self.current_tok.type == TT_KEYWORD and self.current_tok.value == "XNOR":
@@ -257,23 +270,6 @@ class Parser:
             return TruthValue(tok.value)
         else:
             raise Exception(f"Unknown truth value: {tok.value}")
-
-    # ----------------------
-    # Conditional parsing
-    # ----------------------
-    def conditional(self):
-        """
-        Parse a conditional statement: IF antecedent THEN consequent
-        """
-        self.advance()  # skip 'IF'
-        antecedent = self.statement(True)
-
-        if not self.current_tok or not (self.current_tok.type == TT_KEYWORD and self.current_tok.value == "THEN"):
-            raise Exception("Expected THEN keyword")
-        self.advance()
-
-        consequent = self.statement(True)
-        return Conditional(antecedent, consequent)
 
     # ----------------------
     # Quantifier parsing

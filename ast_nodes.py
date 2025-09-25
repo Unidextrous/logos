@@ -156,37 +156,6 @@ class LogicalOp(Node):
         return hash((self.op, self.left, self.right))
 
 # ----------------------
-# Conditionals
-# ----------------------
-class Conditional(Node):
-    """
-    Represents a conditional statement.
-    Example: IF A THEN B
-    """
-    def __init__(self, antecedent, consequent):
-        self.antecedent = antecedent  # Left side (condition)
-        self.consequent = consequent  # Right side (result)
-
-    def substitute(self, subst: dict):
-        """
-        Return a copy of this conditional with variables replaced according to subst.
-        """
-        new_antecedent = self.antecedent.substitute(subst) if hasattr(self.antecedent, "substitute") else self.antecedent
-        new_consequent = self.consequent.substitute(subst) if hasattr(self.consequent, "substitute") else self.consequent
-        return Conditional(new_antecedent, new_consequent)
-
-    def __repr__(self):
-        return f"IF {self.antecedent} THEN {self.consequent}"
-    
-    def __eq__(self, other):
-        return (isinstance(other, Conditional) and
-                self.antecedent == other.antecedent and
-                self.consequent == other.consequent)
-    
-    def __hash__(self):
-        return hash((self.antecedent, self.consequent))
-
-# ----------------------
 # Quantifiers
 # ----------------------
 class Quantifier(Node):
@@ -231,3 +200,39 @@ class Variable(Node):
 
     def __hash__(self):
         return hash(self.name)
+
+class Traceback(Node):
+    """
+    Represents a reasoning trace for a query or a conflicting assignment.
+    Records the chain of inferences and flags contradictions.
+    """
+    def __init__(self, steps=None, contradiction=None):
+        # steps: list of facts/rules/inferred assignments
+        self.steps = steps or []
+        # contradiction: the attempted assignment that conflicts with the KB
+        self.contradiction = contradiction
+
+    def add_step(self, node):
+        """Add a node to the reasoning chain."""
+        self.steps.append(node)
+
+    def set_contradiction(self, node):
+        """Record a contradiction for the attempted assignment."""
+        self.contradiction = node
+
+    def __repr__(self):
+        lines = []
+        if self.contradiction:
+            lines.append("CONTRADICTION!")
+        lines.extend(str(step) for step in self.steps)
+        if self.contradiction:
+            lines.append("CHANGE EXISTING ASSIGNMENTS TO ADD THIS STATEMENT")
+        return "\n".join(lines)
+
+    def __eq__(self, other):
+        return (isinstance(other, Traceback) and
+                self.steps == other.steps and
+                self.contradiction == other.contradiction)
+
+    def __hash__(self):
+        return hash((tuple(self.steps), self.contradiction))

@@ -12,7 +12,7 @@ DIGITS = "0123456789"           # All digit characters
 # ----------------------
 # Includes quantifiers, logical operators, and boolean literals
 KEYWORDS = {
-    "TRUE", "FALSE", "IF", "THEN",
+    "TRUE", "FALSE", "IFF", "IMPLIES",
     "AND", "OR", "NOT", "NAND", "NOR", "XOR", "XNOR",
     "FORALL", "EXISTS"
 }
