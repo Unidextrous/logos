@@ -7,7 +7,7 @@ class Relation:
 
     Supports n-ary roles, optional context, duration, and permanent vs temporary status.
     """
-    def __init__(self, predicate, roles: dict, relation_type="GENERAL", context=None, duration=None):
+    def __init__(self, predicate, roles: dict, relation_type="GENERAL", context=None, duration=None, active=True):
         """
         Args:
             predicate (Predicate): Type of relation (e.g., IS, HAS).
@@ -21,27 +21,64 @@ class Relation:
         self.roles = roles  # e.g. {"subject": FIDO, "object": DOG}
         self.relation_type = relation_type.upper()
         self.context = context
+        self.dependents = set()
         self.created_at = datetime.now()
         self.duration = duration  # timedelta or None
+        self.active = active
+        self.manual_override = None
 
     def is_active(self):
-        """
-        Determine if this relation is currently valid.
-
-        Returns:
-            bool: True if PERMANENT or temporary but not expired.
-        """
-        if self.relation_type == "PERMANENT":
+        if self.manual_override is True:
             return True
+        if self.manual_override is False:
+            return False
+
+        # Check expiration
         if self.duration:
             return datetime.now() < self.created_at + self.duration
+        # Context
+        if isinstance(self.context, Relation):
+            return self.context.is_active()
+        elif callable(self.context):
+            return bool(self.context())
+        elif self.context is not None:
+            return bool(self.context)
         return True
 
+    def activate(self):
+        """Mark this relation as active and update dependents recursively."""
+        self.manual_override = True
+        self.active = True
+        for dep in getattr(self, "dependents", []):
+            dep.update_from_context(force=True)
+
+    def deactivate(self):
+        """Mark this relation as inactive and update dependents recursively."""
+        self.manual_override = False
+        self.active = False
+        for dep in getattr(self, "dependents", []):
+            dep.update_from_context(force=True)
+
+    def update_from_context(self, force=False):
+        """Update this relation's active state based on its context."""
+        new_state = self.is_active()
+        if self.active != new_state or force:
+            self.active = new_state
+            for dep in self.dependents:
+                dep.update_from_context(force=force)
+
     def __repr__(self):
+        """
+        Return a string representation of the relation.
+
+        Active relations show predicate, roles, type, and context.
+        Inactive relations are clearly labeled.
+        """
         roles_str = ", ".join([f"{k}={v.name}" for k, v in self.roles.items()])
         ctx = f", context={self.context}" if self.context else ""
-        return f"Relation({self.predicate_name}: {roles_str}, type={self.relation_type}{ctx})"
-
+        if self.active:
+            return f"Relation({self.predicate_name}: {roles_str}, type={self.relation_type}{ctx})"
+        return "Inactive Relation"
 
 class Predicate:
     """

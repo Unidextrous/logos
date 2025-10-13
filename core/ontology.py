@@ -55,6 +55,10 @@ class Ontology:
                 return existing
 
         r = Relation(predicate, roles, relation_type, context, duration)
+
+        # If this relation has a context that is another relation, register as dependent
+        if isinstance(context, Relation):
+            context.dependents.add(r)
         self.relations.append(r)
 
         # Attach relation to each involved entity
@@ -91,19 +95,31 @@ class Ontology:
 
     def expire_temporary_relations(self, context=None):
         """
-        Remove or deactivate temporary relations that are no longer active.
-
-        Args:
-            context (optional): If provided, only remove relations in this context.
+        Deactivate (not remove) temporary relations that are no longer active.
         """
-        new_relations = []
         for r in self.relations:
-            # Keep if active or permanent
-            if r.is_active():
-                new_relations.append(r)
-            else:
-                # Remove from entities
-                for ent in r.roles.values():
-                    if r in ent.relations:
-                        ent.relations.remove(r)
-        self.relations = new_relations
+            if r.duration and datetime.now() >= r.created_at + r.duration:
+                r.deactivate()
+
+    def refresh_context_relations(self):
+        """
+        Re-evaluate all contextual relations recursively based on their dependencies.
+        """
+        visited = set()
+
+        def update_relation(relation):
+            if relation in visited:
+                return
+            visited.add(relation)
+            if isinstance(relation.context, Relation):
+                update_relation(relation.context)
+            relation.update_from_context()
+
+        for r in self.relations:
+            if r.context:
+                update_relation(r)
+
+        # Update all contextual relations
+        for r in self.relations:
+            if getattr(r, "relation_type", None) == "CONTEXTUAL":
+                update_relation(r)

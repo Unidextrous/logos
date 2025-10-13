@@ -14,17 +14,11 @@ MAMMAL = onto.add_entity("MAMMAL", word_type="NOUN", entity_types=[ANIMAL], desc
 SPECIES = onto.add_entity("SPECIES", word_type="NOUN", entity_types=[LIVING_THING], description="Taxonomic species")
 DOG = onto.add_entity("DOG", word_type="NOUN", entity_types=[MAMMAL, SPECIES], description="Canis lupus familiaris")
 TAIL = onto.add_entity("TAIL", word_type="NOUN", description="A tail of an animal")
-FIDO = onto.add_entity("FIDO", word_type="NOUN", entity_types=[DOG], description="My pet dog")
-JOHN = onto.add_entity("JOHN", word_type="NOUN", description="Person named John")
-LETTER = onto.add_entity("LETTER", word_type="NOUN", description="A written letter")
-POST_OFFICE = onto.add_entity("POST_OFFICE", word_type="NOUN", description="Place to send letters")
+FIDO = onto.add_entity("FIDO", word_type="PROPER_NOUN", entity_types=[DOG], description="My pet dog")
 
 # Create predicates
 IS = onto.add_predicate("IS")
 HAS = onto.add_predicate("HAS")
-TAKES_TO = onto.add_predicate("TAKES_TO")
-
-# Add explicit relations
 
 # Test printing the hierarchy
 print("Hierarchy for DOG:")
@@ -43,14 +37,6 @@ DOG_IS_A_MAMMAL = onto.add_relation(IS, roles={"subject": DOG, "object": MAMMAL}
 # Permanent: DOG HAS TAIL
 DOG_HAS_TAIL = onto.add_relation(HAS, roles={"owner": DOG, "part": TAIL}, relation_type="PERMANENT")
 
-# Temporary: JOHN TAKES LETTER TO POST_OFFICE for 10 seconds
-JOHN_TAKES_LETTER = onto.add_relation(
-    TAKES_TO,
-    roles={"actor": JOHN, "item": LETTER, "destination": POST_OFFICE},
-    relation_type="GENERAL",
-    duration=timedelta(seconds=10)
-)
-
 # Print all relations
 print("\nAll relations:")
 for r in onto.relations:
@@ -64,14 +50,4 @@ for r in FIDO.relations:
 # Print relations for DOG
 print("\nRelations for DOG:")
 for r in DOG.relations:
-    print(r)
-
-# --- Test expiration ---
-import time
-print("\nWaiting 12 seconds to expire temporary relations...")
-time.sleep(12)
-onto.expire_temporary_relations()
-
-print("\nRelations after expiration:")
-for r in onto.relations:
     print(r)
