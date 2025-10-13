@@ -14,14 +14,21 @@ class Relation:
                 - "META"       (e.g., CONTRADICTS, ANALOGOUS_TO)
     """
 
-    def __init__(self, predicate: str, subject, object_, relation_type: str = "GENERAL"):
-        self.predicate = predicate.upper()
+    def __init__(self, predicate, subject, object_):
+        self.predicate = predicate
+        self.predicate_name = predicate.name.upper()
         self.subject = subject
         self.object = object_
-        self.relation_type = relation_type.upper()
+        self.relation_type = predicate.relation_type.upper()
 
     def __repr__(self):
-        return (f"Relation(predicate={self.predicate}, "
+        return (f"Relation(predicate={self.predicate_name}, "
                 f"subject={self.subject.name}, "
                 f"object={self.object.name}, "
                 f"type={self.relation_type})")
+
+class Predicate:
+    """Represents a type of relation (like IS, HAS, PART_OF)."""
+    def __init__(self, name: str, relation_type: str = "GENERAL"):
+        self.name = name.upper()
+        self.relation_type = relation_type.upper()

@@ -1,6 +1,6 @@
 # ontology.py
-from .entity import Entity
-from .relation import Relation
+from .entity import *
+from .relation import *
 
 class Ontology:
     """
@@ -10,9 +10,10 @@ class Ontology:
 
     def __init__(self):
         self.entities = {}   # key: Entity.id -> Entity
+        self.predicates = {}
         self.relations = []  # list of all Relation objects
 
-    def add_entity(self, name: str, word_type: str, entity_types=None, description: str = None):
+    def add_entity(self, name: str, word_type: str, entity_types: list[Entity]=None, description: str = None):
         """Add a new Entity to the ontology."""
         e = Entity(name, word_type, entity_types, description)
         if e.id in self.entities:
@@ -38,8 +39,22 @@ class Ontology:
             results.append(e)
         return results
 
-    def add_relation(self, predicate: str, subject: Entity, object_: Entity, relation_type: str = "GENERAL"):
-        r = Relation(predicate, subject, object_, relation_type)
+    def add_predicate(self, name: str, relation_type: str = "GENERAL"):
+        """Define a new relation type."""
+        r = Predicate(name, relation_type)
+        self.predicates[name.upper()] = r
+        return r
+
+    def add_relation(self, predicate: Predicate, subject: Entity, object_: Entity):
+        # Check if this relation already exists
+        for existing in self.relations:
+            if (existing.predicate.name == predicate.name
+                and existing.subject == subject
+                and existing.object == object_):
+                return existing  # skip adding duplicate
+
+        # Otherwise create and store new relation
+        r = Relation(predicate, subject, object_)
         self.relations.append(r)
         subject.relations.append(r)
         return r
