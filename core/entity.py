@@ -2,16 +2,35 @@
 import uuid
 
 class Entity:
+    """
+    Represents a concept or object in the Logos ontology.
+
+    Attributes:
+        name (str): Lexical form of the entity, e.g., "DOG".
+        word_type (str): Part of speech or type, e.g., "NOUN".
+        entity_types (list[Entity]): Parent types (for inheritance hierarchy).
+        description (str | None): Optional human-readable description.
+        id (str): Unique identifier (UUID-based) for the entity.
+        relations (list[Relation]): Relations this entity participates in (direct + inherited).
+    """
     def __init__(self, name, word_type, entity_types=None, description=None):
         self.name = name.upper()
         self.word_type = word_type.upper()
         self.entity_types = entity_types or []
         self.description = description
-        self.id = f"{self.name}_{uuid.uuid4().hex[:8]}"
-        self.relations = []  # direct + inherited via propagation
+        self.id = f"{self.name}_{uuid.uuid4().hex[:8]}" # unique entity ID
+        self.relations = []  # direct and propagated relations
 
     def get_all_ancestors(self, seen=None):
-        """Return all ancestor entity types recursively."""
+        """
+        Recursively return all ancestor entities in the hierarchy.
+
+        Args:
+            seen (set[Entity], optional): Entities already visited to prevent cycles.
+
+        Returns:
+            set[Entity]: All ancestors of this entity.
+        """
         if seen is None:
             seen = set()
         for et in self.entity_types:
@@ -21,7 +40,12 @@ class Entity:
         return seen
 
     def all_relations(self):
-        """Return all relations this entity participates in, including inherited ones."""
+        """
+        Return all active relations involving this entity, including inherited ones.
+
+        Returns:
+            list[Relation]: Active relations without duplicates.
+        """
         active_rels = [r for r in self.relations if r.is_active()]
         return list(dict.fromkeys(active_rels))  # remove duplicates, preserve order
 
