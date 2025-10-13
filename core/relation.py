@@ -1,34 +1,29 @@
+# relation.py
+from datetime import datetime, timedelta
+
 class Relation:
-    """
-    Represents a logical relationship between entities.
-
-    Attributes:
-        predicate: str — the type of relation, e.g., "IS", "HAS", "IS_AT"
-        subject: Entity — the entity this relation originates from
-        object: Entity — the entity this relation points to
-        relation_type: str — optional tag indicating the logical nature of the relation
-            Examples:
-                - "PERMANENT"  (e.g., IS_A, PART_OF)
-                - "TEMPORARY"  (e.g., IS_AT, IS_COLORED)
-                - "INVERSE"    (e.g., OWNS / OWNED_BY)
-                - "META"       (e.g., CONTRADICTS, ANALOGOUS_TO)
-    """
-
-    def __init__(self, predicate, subject, object_):
+    def __init__(self, predicate, roles: dict, relation_type="GENERAL", context=None, duration=None):
         self.predicate = predicate
         self.predicate_name = predicate.name.upper()
-        self.subject = subject
-        self.object = object_
-        self.relation_type = predicate.relation_type.upper()
+        self.roles = roles  # e.g. {"subject": FIDO, "object": DOG}
+        self.relation_type = relation_type.upper()
+        self.context = context
+        self.created_at = datetime.now()
+        self.duration = duration  # timedelta or None
+
+    def is_active(self):
+        if self.relation_type == "PERMANENT":
+            return True
+        if self.duration:
+            return datetime.now() < self.created_at + self.duration
+        return True
 
     def __repr__(self):
-        return (f"Relation(predicate={self.predicate_name}, "
-                f"subject={self.subject.name}, "
-                f"object={self.object.name}, "
-                f"type={self.relation_type})")
+        roles_str = ", ".join([f"{k}={v.name}" for k, v in self.roles.items()])
+        ctx = f", context={self.context}" if self.context else ""
+        return f"Relation({self.predicate_name}: {roles_str}, type={self.relation_type}{ctx})"
+
 
 class Predicate:
-    """Represents a type of relation (like IS, HAS, PART_OF)."""
-    def __init__(self, name: str, relation_type: str = "GENERAL"):
+    def __init__(self, name: str):
         self.name = name.upper()
-        self.relation_type = relation_type.upper()
