@@ -1,4 +1,5 @@
 # relation.py
+import threading
 from datetime import datetime, timedelta
 
 class Relation:
@@ -67,6 +68,18 @@ class Relation:
             for dep in self.dependents:
                 dep.update_from_context(force=force)
 
+    def start_expiration_timer(self):
+        """Start a background timer to deactivate temporary relations."""
+        if self.duration and self.active:
+            def expire_relation():
+                # Wait for the duration without blocking main code
+                threading.Event().wait(self.duration.total_seconds())
+                # Deactivate and propagate to dependents
+                self.deactivate()
+            
+            t = threading.Thread(target=expire_relation, daemon=True)
+            t.start()
+            
     def __repr__(self):
         """
         Return a string representation of the relation.

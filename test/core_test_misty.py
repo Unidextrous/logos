@@ -61,8 +61,13 @@ for r in [MISTY_IS_IN_A_BOX, MISTY_IS_HAPPY, MISTY_IS_PURRING]:
     print(f"{r} active={r.active}")
 
 # Simulate expiration of MISTY_IN_BOX
-time.sleep(5)
-onto.expire_temporary_relations()
+time.sleep(3)
+
+print("\nJust before MISTY leaves BOX:")
+for r in [MISTY_IS_IN_A_BOX, MISTY_IS_HAPPY, MISTY_IS_PURRING]:
+    print(f"{r} active={r.active}")
+
+time.sleep(2)
 
 print("\nAfter MISTY is no longer in BOX:")
 for r in [MISTY_IS_IN_A_BOX, MISTY_IS_HAPPY, MISTY_IS_PURRING]:

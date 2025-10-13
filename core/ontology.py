@@ -56,6 +56,9 @@ class Ontology:
 
         r = Relation(predicate, roles, relation_type, context, duration)
 
+        if relation_type.upper() == "TEMPORARY" and duration is not None:
+            r.start_expiration_timer()
+            
         # If this relation has a context that is another relation, register as dependent
         if isinstance(context, Relation):
             context.dependents.add(r)
