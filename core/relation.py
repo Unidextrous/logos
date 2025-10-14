@@ -1,6 +1,7 @@
 # relation.py
 import threading
 from datetime import datetime, timedelta
+from .context import RelationContext
 
 class Relation:
     """
@@ -29,22 +30,26 @@ class Relation:
         self.manual_override = None
 
     def is_active(self):
-        if self.manual_override is True:
-            return True
-        if self.manual_override is False:
+        if not self.active:
             return False
 
-        # Check expiration
+        # Check for expiration
         if self.duration:
-            return datetime.now() < self.created_at + self.duration
-        # Context
+            if datetime.now() >= self.created_at + self.duration:
+                return False
+
+        # Check for context
         if isinstance(self.context, Relation):
             return self.context.is_active()
+        elif isinstance(self.context, RelationContext):
+            return self.context.evaluate()
         elif callable(self.context):
             return bool(self.context())
         elif self.context is not None:
+            # simple truthy constant
             return bool(self.context)
-        return True
+
+        return self.active
 
     def activate(self):
         """Mark this relation as active and update dependents recursively."""
