@@ -8,28 +8,28 @@ from core.ontology import Ontology
 onto = Ontology()
 
 # Create entities
-LIVING_THING = onto.add_entity("LIVING_THING", word_type="NOUN", description="Multicellular organisms that move")
+CATEGORY = onto.add_entity("CATEGORY", word_type="NOUN", description="A general category of things")
+INSTANCE = onto.add_entity("INSTANCE", word_type="NOUN", description="An individual instance of an entity type")
+LIVING_THING = onto.add_entity("LIVING_THING", word_type="NOUN", entity_types=[CATEGORY], description="Multicellular organisms that move")
 ANIMAL = onto.add_entity("ANIMAL", word_type="NOUN", entity_types=[LIVING_THING], description="Warm-blooded vertebrates")
 MAMMAL = onto.add_entity("MAMMAL", word_type="NOUN", entity_types=[ANIMAL], description="Mammals")
 SPECIES = onto.add_entity("SPECIES", word_type="NOUN", entity_types=[LIVING_THING], description="Taxonomic species")
 DOG = onto.add_entity("DOG", word_type="NOUN", entity_types=[MAMMAL, SPECIES], description="Canis lupus familiaris")
+A_DOG = onto.add_entity("A_DOG", word_type="NOUN", entity_types=[DOG, INSTANCE], description="An instance of a dog")
+A_PET = onto.add_entity("A_PET", word_type="NOUN", entity_types=[INSTANCE], description="An instance of a pet")
 TAIL = onto.add_entity("TAIL", word_type="NOUN", description="A tail of an animal")
-FIDO = onto.add_entity("FIDO", word_type="PROPER_NOUN", entity_types=[DOG], description="My pet dog")
+FIDO = onto.add_entity("FIDO", word_type="PROPER_NOUN", entity_types=[A_DOG, A_PET], description="My pet dog")
 
 # Create predicates
 IS = onto.add_predicate("IS")
 HAS = onto.add_predicate("HAS")
 
-# Test printing the hierarchy
-print("Hierarchy for DOG:")
-onto.describe_hierarchy(DOG, show_description=True)
-
-print("\nHierarchy for FIDO:")
-onto.describe_hierarchy(FIDO, show_description=True)
-
 # Add relations
 # Permanent: FIDO IS A DOG
 FIDO_IS_A_DOG = onto.add_relation(IS, roles={"subject": FIDO, "object": DOG}, relation_type="PERMANENT")
+
+# Permanent: FIDO IS A PET
+FIDO_IS_A_PET = onto.add_relation(IS, roles={"subject": FIDO, "object": A_PET}, relation_type="PERMANENT")
 
 # Permanent: DOG IS A MAMMAL
 DOG_IS_A_MAMMAL = onto.add_relation(IS, roles={"subject": DOG, "object": MAMMAL}, relation_type="PERMANENT")

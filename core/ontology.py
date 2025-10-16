@@ -1,6 +1,7 @@
 # ontology.py
 from .entity import *
 from .relation import *
+from .temporal import *
 
 class Ontology:
     """
@@ -31,7 +32,7 @@ class Ontology:
         self.predicates[p.name] = p
         return p
 
-    def add_relation(self, predicate, roles: dict, relation_type="GENERAL", context=None, duration=None):
+    def add_relation(self, predicate, roles: dict, relation_type="GENERAL", context=None):
         """
         Add a new relation between entities (n-ary).
 
@@ -54,11 +55,8 @@ class Ontology:
                 existing.context == context):
                 return existing
 
-        r = Relation(predicate, roles, relation_type, context, duration)
+        r = Relation(predicate, roles, relation_type, context)
 
-        if relation_type.upper() == "TEMPORARY" and duration is not None:
-            r.start_expiration_timer()
-            
         # If this relation has a context that is another relation, register as dependent
         if isinstance(context, Relation):
             context.dependents.add(r)
@@ -72,6 +70,59 @@ class Ontology:
         self.propagate_relation_to_descendants(r)
         return r
 
+    def add_temporal_relation(
+        self,
+        predicate,
+        roles: dict,
+        *,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        relation_type: str = "GENERAL",
+        context=None,
+        active: bool = True,
+    ):
+        """
+        Create and register a TemporalRelation.
+
+        Args:
+            predicate (Predicate): relation type (e.g., ATTENDS)
+            roles (dict): role->Entity mapping
+            start_time (datetime|None): when relation begins (may be None)
+            end_time (datetime|None): when relation ends (may be None)
+            relation_type (str): logical subtype (e.g., CONTEXTUAL, PERMANENT...)
+            context (any): optional context (Relation, RelationContext, or callable)
+            active (bool): whether the relation starts active
+        """
+        for existing in self.relations:
+            if (isinstance(existing, TemporalRelation) and
+                existing.predicate == predicate and
+                existing.roles == roles and
+                existing.context == context and
+                getattr(existing, "relation_type", None) == relation_type.upper()):
+                return existing
+
+        r = TemporalRelation(
+            predicate=predicate,
+            roles=roles,
+            start_time=start_time,
+            end_time=end_time,
+            context=context,
+            relation_type=relation_type,
+            active=active,
+        )
+
+        self.relations.append(r)
+
+        for e in roles.values():
+            e.relations.append(r)
+
+        self.propagate_relation_to_descendants(r)
+
+        if isinstance(context, Relation):
+            context.dependents.add(r)
+
+        return r
+    
     def propagate_relation_to_descendants(self, relation):
         """
         Ensure descendants of any involved entities inherit this relation.
@@ -95,14 +146,6 @@ class Ontology:
         for et in entity.entity_types:
             if et.id not in seen:
                 self.describe_hierarchy(et, level=level+1, seen=seen, show_description=show_description)
-
-    def expire_temporary_relations(self, context=None):
-        """
-        Deactivate (not remove) temporary relations that are no longer active.
-        """
-        for r in self.relations:
-            if r.duration and datetime.now() >= r.created_at + r.duration:
-                r.deactivate()
 
     def refresh_context_relations(self):
         """
