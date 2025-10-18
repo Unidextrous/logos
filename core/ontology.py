@@ -32,7 +32,14 @@ class Ontology:
         self.predicates[p.name] = p
         return p
 
-    def add_relation(self, predicate, roles: dict, relation_type="GENERAL", context=None):
+    def add_relation(
+        self,
+        predicate,
+        roles: dict,
+        relation_type="GENERAL",
+        context=None,
+        truth_value=None,
+    ):
         """
         Add a new relation between entities (n-ary).
 
@@ -43,31 +50,42 @@ class Ontology:
             roles (dict[str, Entity]): Role-to-entity mapping.
             relation_type (str): Logical type.
             context (any): Optional context dependency.
-            duration (timedelta | None): Optional lifespan of relation.
+            truth_value (TruthValue | None): Optional explicit truth value.
 
         Returns:
             Relation: The newly created or existing relation.
         """
         # Prevent duplicates
         for existing in self.relations:
-            if (existing.predicate == predicate and
-                existing.roles == roles and
-                existing.context == context):
+            if (
+                existing.predicate == predicate
+                and existing.roles == roles
+                and existing.context == context
+            ):
                 return existing
 
-        r = Relation(predicate, roles, relation_type, context)
+        # Create relation with truth_value if provided
+        r = Relation(
+            predicate,
+            roles,
+            relation_type,
+            context,
+            truth_value=truth_value,
+        )
 
-        # If this relation has a context that is another relation, register as dependent
+        # Register dependency if context is another relation
         if isinstance(context, Relation):
             context.dependents.add(r)
+
         self.relations.append(r)
 
-        # Attach relation to each involved entity
+        # Attach to entities
         for e in roles.values():
             e.relations.append(r)
 
-        # Propagate to descendants dynamically
+        # Propagate to descendants
         self.propagate_relation_to_descendants(r)
+
         return r
 
     def add_temporal_relation(
@@ -79,7 +97,8 @@ class Ontology:
         end_time: datetime | None = None,
         relation_type: str = "GENERAL",
         context=None,
-        active: bool = True,
+        truth_value=None,
+        default_truth=None
     ):
         """
         Create and register a TemporalRelation.
@@ -91,24 +110,27 @@ class Ontology:
             end_time (datetime|None): when relation ends (may be None)
             relation_type (str): logical subtype (e.g., CONTEXTUAL, PERMANENT...)
             context (any): optional context (Relation, RelationContext, or callable)
+            truth_value (TruthValue | None): optional explicit truth value.
             active (bool): whether the relation starts active
         """
         for existing in self.relations:
-            if (isinstance(existing, TemporalRelation) and
-                existing.predicate == predicate and
-                existing.roles == roles and
-                existing.context == context and
-                getattr(existing, "relation_type", None) == relation_type.upper()):
+            if (
+                isinstance(existing, TemporalRelation)
+                and existing.predicate == predicate
+                and existing.roles == roles
+                and existing.context == context
+                and getattr(existing, "relation_type", None) == relation_type.upper()
+            ):
                 return existing
 
+        # Create TemporalRelation with optional truth_value
         r = TemporalRelation(
             predicate=predicate,
             roles=roles,
-            start_time=start_time,
-            end_time=end_time,
             context=context,
             relation_type=relation_type,
-            active=active,
+            truth_value=truth_value,
+            default_truth=default_truth
         )
 
         self.relations.append(r)

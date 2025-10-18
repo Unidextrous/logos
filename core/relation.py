@@ -1,78 +1,76 @@
 # relation.py
-from datetime import datetime, timedelta
+from .truth import TruthState, TruthValue
 from .context import RelationContext
 
 class Predicate:
     """Represents a type of relation (like IS, HAS, TAKES_TO)."""
-    def __init__(self, name: str):
+    def __init__(self, name: str, roles: list[str] | None = None):
         self.name = name.upper()
+        self.roles = roles or []
 
 class Relation:
     """
     Represents a logical relation between entities.
 
-    Supports n-ary roles, optional context, and permanent/temporary status.
+    Supports n-ary roles, optional context, and truth evaluation via TruthValue.
     """
 
-    def __init__(self, predicate, roles: dict, relation_type="GENERAL", context=None, active=True):
+    def __init__(
+        self,
+        predicate: Predicate,
+        roles: dict,
+        relation_type: str = "GENERAL",
+        context=None,
+        truth_value: TruthValue | None = None
+    ):
         """
         Args:
             predicate (Predicate): Type of relation (e.g., IS, HAS).
             roles (dict[str, Entity]): Mapping role names to entities, e.g., {"subject": FIDO, "object": DOG}.
             relation_type (str): Logical type: GENERAL, PERMANENT, etc.
-            context (any): Optional context that governs the validity of the relation.
-            active (bool): Whether active at creation.
+            context (RelationContext | callable | Relation | None): governs validity.
+            truth_value (TruthValue | None): initial truth state (defaults to UNKNOWN)
         """
         self.predicate = predicate
         self.predicate_name = predicate.name.upper()
         self.roles = roles
         self.relation_type = relation_type.upper()
         self.context = context
-        self.active = active
-        self.manual_override = None
+        self.truth_value = truth_value or TruthValue(value=TruthState.UNKNOWN)
         self.dependents = set()
 
-    def is_active(self) -> bool:
-        """Check if relation is currently active based on context and manual override."""
-        if not self.active:
-            return False
-
+    def evaluate_truth(self) -> TruthState:
+        """Evaluate the current truth of this relation based on context."""
+        # Context can override the base truth_value
         if isinstance(self.context, Relation):
-            return self.context.is_active()
+            return self.context.evaluate_truth()
         elif isinstance(self.context, RelationContext):
-            return self.context.evaluate()
+            return self.context.evaluate_truth()
         elif callable(self.context):
-            return bool(self.context())
+            # Callables should return a TruthState
+            return self.context()
         elif self.context is not None:
-            return bool(self.context)
+            # Wrap raw values into a TruthValue
+            return TruthValue(self.context).value
 
-        return self.active
+        return self.truth_value.value
 
-    def activate(self):
-        """Mark relation as active and notify dependents."""
-        self.active = True
-        self.manual_override = True
-        for dep in self.dependents:
-            dep.update_from_context(force=True)
-
-    def deactivate(self):
-        """Mark relation as inactive and notify dependents."""
-        self.active = False
-        self.manual_override = False
-        for dep in self.dependents:
-            dep.update_from_context(force=True)
-
-    def update_from_context(self, force=False):
-        """Update active state based on context."""
-        new_state = self.is_active()
-        if self.active != new_state or force:
-            self.active = new_state
+    def update_from_context(self):
+        """Re-evaluate truth_value based on context and propagate to dependents."""
+        new_truth = self.evaluate_truth()
+        if new_truth != self.truth_value.value:
+            self.truth_value.value = new_truth
             for dep in self.dependents:
-                dep.update_from_context(force=force)
+                dep.update_from_context()
+
+    def set_truth_value(self, new_value: TruthValue):
+        """Directly set a TruthValue and propagate changes."""
+        if new_value.value != self.truth_value.value:
+            self.truth_value = new_value
+            for dep in self.dependents:
+                dep.update_from_context()
 
     def __repr__(self):
         roles_str = ", ".join([f"{k}={v.name}" for k, v in self.roles.items()])
         ctx = f", context={self.context}" if self.context else ""
-        if self.active:
-            return f"Relation({self.predicate_name}: {roles_str}, type={self.relation_type}{ctx})"
-        return "Inactive Relation"
+        return f"Relation({self.predicate_name}: {roles_str}, type={self.relation_type}{ctx}, truth={self.truth_value})"

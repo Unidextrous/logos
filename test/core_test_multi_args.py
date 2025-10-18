@@ -3,6 +3,7 @@ import os
 from datetime import timedelta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.ontology import Ontology
+from core.truth import TruthState, TruthValue
 
 # Initialize ontology
 onto = Ontology()
@@ -16,7 +17,7 @@ HEAD = onto.add_entity("HEAD", word_type="NOUN", entity_types=[BODY_PART], descr
 ARMS = onto.add_entity("ARMS", word_type="NOUN", entity_types=[BODY_PART], description="Human arms")
 LEGS = onto.add_entity("LEGS", word_type="NOUN", entity_types=[BODY_PART], description="Human legs")
 
-# Relation type GENERAL, not temporal
+# Relation type GENERAL, with explicit TruthValue
 HUMAN_HAS_BODY_PARTS = onto.add_relation(
     predicate=onto.add_predicate("HAS_PARTS"),
     roles={
@@ -25,7 +26,8 @@ HUMAN_HAS_BODY_PARTS = onto.add_relation(
         "part2": ARMS,
         "part3": LEGS
     },
-    relation_type="GENERAL"
+    relation_type="GENERAL",
+    truth_value=TruthValue(value=TruthState.TRUE)  # Alethic TRUE
 )
 
 # Print all relations

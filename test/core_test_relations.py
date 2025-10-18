@@ -3,51 +3,59 @@ import os
 from datetime import timedelta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.ontology import Ontology
+from core.truth import Modality, TruthState, TruthValue
 
-# Initialize ontology
 onto = Ontology()
 
-# Create entities
-CATEGORY = onto.add_entity("CATEGORY", word_type="NOUN", description="A general category of things")
-INSTANCE = onto.add_entity("INSTANCE", word_type="NOUN", description="An individual instance of an entity type")
-LIVING_THING = onto.add_entity("LIVING_THING", word_type="NOUN", entity_types=[CATEGORY], description="Multicellular organisms that move")
-ANIMAL = onto.add_entity("ANIMAL", word_type="NOUN", entity_types=[LIVING_THING], description="Warm-blooded vertebrates")
-MAMMAL = onto.add_entity("MAMMAL", word_type="NOUN", entity_types=[ANIMAL], description="Mammals")
-SPECIES = onto.add_entity("SPECIES", word_type="NOUN", entity_types=[LIVING_THING], description="Taxonomic species")
-DOG = onto.add_entity("DOG", word_type="NOUN", entity_types=[MAMMAL, SPECIES], description="Canis lupus familiaris")
-A_DOG = onto.add_entity("A_DOG", word_type="NOUN", entity_types=[DOG, INSTANCE], description="An instance of a dog")
-A_PET = onto.add_entity("A_PET", word_type="NOUN", entity_types=[INSTANCE], description="An instance of a pet")
-TAIL = onto.add_entity("TAIL", word_type="NOUN", description="A tail of an animal")
-FIDO = onto.add_entity("FIDO", word_type="PROPER_NOUN", entity_types=[A_DOG, A_PET], description="My pet dog")
+# Entities
+A = onto.add_entity("A", word_type="NOUN")
+B = onto.add_entity("B", word_type="NOUN")
+C = onto.add_entity("C", word_type="NOUN")
 
-# Create predicates
-IS = onto.add_predicate("IS")
-HAS = onto.add_predicate("HAS")
+# Predicate
+REL = onto.add_predicate("REL")
 
-# Add relations
-# Permanent: FIDO IS A DOG
-FIDO_IS_A_DOG = onto.add_relation(IS, roles={"subject": FIDO, "object": DOG}, relation_type="PERMANENT")
+# Relation examples with different TruthValues
+# TRUE (Alethic, default)
+r_true = onto.add_relation(
+    REL, 
+    roles={"subject": A, "object": B}, 
+    relation_type="PERMANENT",
+    truth_value=TruthValue(value=TruthState.TRUE)
+)
 
-# Permanent: FIDO IS A PET
-FIDO_IS_A_PET = onto.add_relation(IS, roles={"subject": FIDO, "object": A_PET}, relation_type="PERMANENT")
+# FALSE (Alethic)
+r_false = onto.add_relation(
+    REL,
+    roles={"subject": B, "object": C},
+    relation_type="PERMANENT",
+    truth_value=TruthValue(value=TruthState.FALSE)
+)
 
-# Permanent: DOG IS A MAMMAL
-DOG_IS_A_MAMMAL = onto.add_relation(IS, roles={"subject": DOG, "object": MAMMAL}, relation_type="PERMANENT")
+# UNKNOWN (Alethic)
+r_unknown = onto.add_relation(
+    REL,
+    roles={"subject": A, "object": C},
+    relation_type="PERMANENT",
+    truth_value=TruthValue(value=TruthState.UNKNOWN)
+)
 
-# Permanent: DOG HAS TAIL
-DOG_HAS_TAIL = onto.add_relation(HAS, roles={"owner": DOG, "part": TAIL}, relation_type="PERMANENT")
+# SUPERPOSITION with probability
+r_superposition = onto.add_relation(
+    REL,
+    roles={"subject": C, "object": A},
+    relation_type="PERMANENT",
+    truth_value=TruthValue(value=TruthState.SUPERPOSITION, probability=0.7)
+)
+
+# Relation with a different modality (e.g., Epistemic)
+r_epistemic = onto.add_relation(
+    REL,
+    roles={"subject": B, "object": A},
+    relation_type="PERMANENT",
+    truth_value=TruthValue(value=TruthState.TRUE, modality=Modality.EPISTEMIC)
+)
 
 # Print all relations
-print("\nAll relations:")
 for r in onto.relations:
-    print(r)
-
-# Print relations for FIDO
-print("\nRelations for FIDO:")
-for r in FIDO.relations:
-    print(r)
-
-# Print relations for DOG
-print("\nRelations for DOG:")
-for r in DOG.relations:
-    print(r)
+    print(r, "->", r.evaluate_truth())

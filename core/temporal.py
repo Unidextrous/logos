@@ -1,31 +1,19 @@
-# temoral.py
-from datetime import datetime, timedelta
+# temporal.py
+from datetime import datetime
 from typing import Optional, List
 from .relation import Relation
+from .truth import TruthState, TruthValue
 
 
 class TimeInterval:
     """
     Represents a period of time with an optional start and end.
-
-    - If start_time is None, the interval is considered to begin indefinitely in the past.
-    - If end_time is None, the interval continues indefinitely into the future.
     """
-
     def __init__(self, start_time: Optional[datetime], end_time: Optional[datetime] = None):
         self.start_time = start_time
         self.end_time = end_time
 
-    # ────────────────────────────────────────────────────────────────
-    # Fundamental Behaviors
-    # ────────────────────────────────────────────────────────────────
-
     def contains(self, moment: datetime) -> bool:
-        """
-        Return True if the given datetime 'moment' falls within this interval.
-
-        Open-ended intervals (with None for start or end) are treated as infinite.
-        """
         if self.start_time is not None and moment < self.start_time:
             return False
         if self.end_time is not None and moment >= self.end_time:
@@ -33,50 +21,31 @@ class TimeInterval:
         return True
 
     def overlaps(self, other: "TimeInterval") -> bool:
-        """
-        Check whether this interval overlaps another.
-
-        Open-ended sides are treated as infinitely far in that direction.
-        """
         start_a = self.start_time or datetime.min
         end_a = self.end_time or datetime.max
         start_b = other.start_time or datetime.min
         end_b = other.end_time or datetime.max
         return start_a < end_b and start_b < end_a
 
-    # ────────────────────────────────────────────────────────────────
-    # Editing & Management
-    # ────────────────────────────────────────────────────────────────
-
     def modify(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None):
-        """
-        Safely modify this interval's start and/or end time.
-        Ensures start_time < end_time if both are defined.
-        """
         if start_time is not None and end_time is not None and start_time >= end_time:
             raise ValueError("start_time must be earlier than end_time")
-
         if start_time is not None:
             self.start_time = start_time
         if end_time is not None:
             self.end_time = end_time
 
-    # ────────────────────────────────────────────────────────────────
-    # Representations
-    # ────────────────────────────────────────────────────────────────
-
     def __repr__(self):
         return f"<TimeInterval {self.start_time} → {self.end_time}>"
 
     def __lt__(self, other: "TimeInterval"):
-        """Allow sorting intervals chronologically (None treated as earliest start)."""
         return (self.start_time or datetime.min) < (other.start_time or datetime.min)
 
 
 class TemporalRelation(Relation):
     """
     Represents a relation whose truth varies over time.
-    Extends the standard Relation class with a set of TimeIntervals.
+    Extends the standard Relation class with a dictionary mapping intervals to TruthValues.
     """
 
     def __init__(
@@ -84,69 +53,60 @@ class TemporalRelation(Relation):
         predicate,
         roles: dict,
         *,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
         relation_type: str = "TEMPORAL",
         context=None,
-        active: bool = True,
+        default_truth: TruthValue | None = None
     ):
-        # Initialize base relation
         super().__init__(predicate, roles, relation_type=relation_type, context=context)
+        self.interval_truths: dict[TimeInterval, TruthValue] = {}
+        self.default_truth = default_truth or TruthValue(TruthState.UNKNOWN)
 
-        # Store active intervals
-        self.active_intervals: List[TimeInterval] = []
-
-        # If an interval is specified, add it immediately
-        if active:
-            self.add_interval(start_time, end_time)
-
-    # ────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────
     # Interval Management
-    # ────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────
 
-    def add_interval(self, start_time: Optional[datetime], end_time: Optional[datetime] = None):
+    def add_interval(self, interval: TimeInterval, truth_value: TruthValue | None = None):
         """
-        Add a new interval, ensuring no overlaps occur.
-        Intervals are automatically sorted chronologically.
+        Add a new interval with a TruthValue.
+        Raises ValueError if the interval overlaps any existing interval.
         """
-        new_interval = TimeInterval(start_time, end_time)
-
-        # Check for overlap with existing intervals
-        for existing in self.active_intervals:
-            if new_interval.overlaps(existing):
-                raise ValueError(f"New interval {new_interval} overlaps existing {existing}")
-
-        self.active_intervals.append(new_interval)
-        self.active_intervals.sort()
+        for existing in self.interval_truths:
+            if interval.overlaps(existing):
+                raise ValueError(f"New interval {interval} overlaps existing {existing}")
+        self.interval_truths[interval] = truth_value or TruthValue()
 
     def remove_interval(self, interval: TimeInterval):
-        """Remove a specific interval, if it exists."""
-        if interval in self.active_intervals:
-            self.active_intervals.remove(interval)
+        """Remove a specific interval if it exists."""
+        if interval in self.interval_truths:
+            del self.interval_truths[interval]
 
-    def clear(self):
-        """Remove all intervals entirely."""
-        self.active_intervals.clear()
+    def clear_intervals(self):
+        """Remove all intervals."""
+        self.interval_truths.clear()
 
-    # ────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────
     # Temporal Logic
-    # ────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────
 
-    def is_active_at(self, moment: datetime) -> bool:
-        """Return True if any interval contains the given time."""
-        return any(interval.contains(moment) for interval in self.active_intervals)
+    def truth_value_at(self, moment: datetime | None = None, sample_probability: bool = False) -> TruthState:
+        if moment is None:
+            moment = datetime.now()
+        interval = next((i for i in self.interval_truths if i.contains(moment)), None)
+        if interval is None:
+            return self.default_truth.evaluate(sample_probability=sample_probability)
+        return self.interval_truths[interval].evaluate(sample_probability=sample_probability)
 
-    def get_current_interval(self) -> Optional[TimeInterval]:
-        """Return the interval that contains the current time, if any."""
+    def get_current_interval(self) -> tuple[TimeInterval, TruthValue] | None:
+        """Return the current interval and its TruthValue, if any."""
         now = datetime.now()
-        for interval in self.active_intervals:
+        for interval, tv in self.interval_truths.items():
             if interval.contains(now):
-                return interval
+                return (interval, tv)
         return None
 
-    # ────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────
     # Representation
-    # ────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────
 
     def __repr__(self):
-        return f"<TemporalRelation type={self.relation_type} intervals={self.active_intervals}>"
+        return f"<TemporalRelation type={self.relation_type} intervals={list(self.interval_truths.items())}>"
