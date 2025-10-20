@@ -1,18 +1,14 @@
 # Logos
 
 Logos is an experimental logic and semantics engine — a programmable framework for expressing meaning through structured syntax.
-Its goal is to explore how entities, relations, and inference can form the foundation of a computational model of thought.
+Its goal is to explore how entities, relations, temporal conditions, and inference can form the foundation of a computational model of thought.
 
 🔹 Features (Planned & In Progress)
-
-Entity & Relation System — Model knowledge as interconnected logical components.
-
-Parser — Translate human-readable expressions into structured syntax trees.
-
-Reasoning Engine — Evaluate truth conditions and infer relationships between propositions.
-
+Entity & Relation System — Model knowledge as interconnected logical components, including temporal relations and context-sensitive truth evaluation.
+Truth System — Supports multiple truth states (TRUE, FALSE, UNKNOWN, SUPERPOSITION) with probabilistic and default handling.
+Temporal Relations — Track truth over time intervals with flexible defaults and overlapping interval prevention.
+Reasoning Engine — Evaluate truth conditions, propagate context, and infer relationships between propositions.
 Interactive REPL — Experiment with Logos expressions directly from the command line.
-
 Extensible Core — Modular Python architecture for future semantic and symbolic extensions.
 
 🧩 Project Structure
@@ -22,8 +18,11 @@ logos/
 │
 ├── core/
 │   ├── __init__.py
+│   ├── truth.py           # Truth states, modalities, and probabilistic evaluation
 │   ├── entity.py          # Core entity and relation classes
 │   ├── relation.py        # Handles links between entities
+│   ├── context.py         # Logical contexts and compound relation evaluation
+│   ├── temporal.py        # Temporal relations and time interval management
 │   └── ontology.py        # Data model that stores all entities/relations
 │
 ├── parser/
@@ -46,7 +45,8 @@ logos/
 │
 ├── tests/
 │   ├── __init__.py
-│   ├── test_core.py
+│   ├── core_test_context.py
+│   ├── core_test_temporal.py
 │   ├── test_parser.py
 │   ├── test_reasoning.py
 │   └── test_repl.py
