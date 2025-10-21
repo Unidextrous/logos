@@ -18,7 +18,6 @@ def test_context_evaluation():
     C = Relation(IS, {"subject": None}, truth_value=TruthValue(TruthState.FALSE))
 
     UNKNOWN_REL = Relation(IS, {"subject": None}, truth_value=TruthValue(TruthState.UNKNOWN))
-    SUPER_REL = Relation(IS, {"subject": None}, truth_value=TruthValue(TruthState.SUPERPOSITION, probability=0.7))
 
     # Logical combinations
     ctx_and = RelationContext(A) & RelationContext(B)
@@ -30,11 +29,8 @@ def test_context_evaluation():
     ctx_xnor = ~(RelationContext(A) ^ RelationContext(C))
     ctx_complex = (RelationContext(A) & (~RelationContext(C) | RelationContext(B)))
 
-    # Additional tests with UNKNOWN and SUPERPOSITION
+    # Additional tests with UNKNOWN
     ctx_unknown_and_true = RelationContext(UNKNOWN_REL) & RelationContext(A)
-    ctx_super_or_false = RelationContext(SUPER_REL) | RelationContext(C)
-    ctx_unknown_and_super = RelationContext(UNKNOWN_REL) & RelationContext(SUPER_REL)
-    ctx_unknown_or_super = RelationContext(UNKNOWN_REL) | RelationContext(SUPER_REL)
 
     # --- Assertions for initial state ---
     assert ctx_and.evaluate().value == TruthState.TRUE
@@ -46,11 +42,8 @@ def test_context_evaluation():
     assert ctx_xnor.evaluate().value == TruthState.FALSE
     assert ctx_complex.evaluate().value == TruthState.TRUE
 
-    # Assertions for UNKNOWN/SUPERPOSITION combinations
+    # Assertions for UNKNOWN combinations
     assert ctx_unknown_and_true.evaluate().value == TruthState.UNKNOWN
-    assert ctx_super_or_false.evaluate().value == TruthState.SUPERPOSITION
-    assert ctx_unknown_and_super.evaluate().value == TruthState.SUPERPOSITION
-    assert ctx_unknown_or_super.evaluate().value == TruthState.SUPERPOSITION
 
     # Flip A and B to FALSE
     A.truth_value = TruthValue(TruthState.FALSE)
@@ -66,11 +59,8 @@ def test_context_evaluation():
     assert ctx_xnor.evaluate().value == TruthState.TRUE
     assert ctx_complex.evaluate().value == TruthState.FALSE
 
-    # Assertions for UNKNOWN/SUPERPOSITION with A FALSE
+    # Assertions for UNKNOWN with A FALSE
     assert ctx_unknown_and_true.evaluate().value == TruthState.FALSE
-    assert ctx_super_or_false.evaluate().value == TruthState.SUPERPOSITION
-    assert ctx_unknown_and_super.evaluate().value == TruthState.SUPERPOSITION
-    assert ctx_unknown_or_super.evaluate().value == TruthState.SUPERPOSITION
 
     print("\n✅ All context logic tests passed!\n")
 

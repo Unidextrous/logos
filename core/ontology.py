@@ -129,7 +129,6 @@ class Ontology:
             roles=roles,
             context=context,
             relation_type=relation_type,
-            truth_value=truth_value,
             default_truth=default_truth
         )
 

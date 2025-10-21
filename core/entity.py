@@ -11,7 +11,7 @@ class Entity:
         entity_types (list[Entity]): Parent types (for inheritance hierarchy).
         description (str | None): Optional human-readable description.
         id (str): Unique identifier (UUID-based) for the entity.
-        relations (list[Relation]): Relations this entity participates in (direct + inherited).
+        relations (list[Relation]): Relations this entity directly participates in (propagated relations included).
     """
     def __init__(self, name, word_type, entity_types=None, description=None):
         self.name = name.upper()

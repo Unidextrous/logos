@@ -50,7 +50,7 @@ class RelationContext:
                 return TruthValue(TruthState.FALSE, modality=tv.modality)
             if tv.value == TruthState.FALSE:
                 return TruthValue(TruthState.TRUE, modality=tv.modality)
-            # UNKNOWN or SUPERPOSITION passes through
+            # UNKNOWN passes through
             return tv
 
         elif op == "AND":
@@ -58,8 +58,6 @@ class RelationContext:
                 return TruthValue(TruthState.FALSE)
             if all(v.value == TruthState.TRUE for v in vals):
                 return TruthValue(TruthState.TRUE)
-            if any(v.value == TruthState.SUPERPOSITION for v in vals):
-                return TruthValue(TruthState.SUPERPOSITION, probability=vals[0].probability)
             return TruthValue(TruthState.UNKNOWN)
 
         elif op == "OR":
@@ -67,8 +65,6 @@ class RelationContext:
                 return TruthValue(TruthState.TRUE)
             if all(v.value == TruthState.FALSE for v in vals):
                 return TruthValue(TruthState.FALSE)
-            if any(v.value == TruthState.SUPERPOSITION for v in vals):
-                return TruthValue(TruthState.SUPERPOSITION, probability=vals[0].probability)
             return TruthValue(TruthState.UNKNOWN)
 
         elif op == "XOR":

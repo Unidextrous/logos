@@ -40,14 +40,6 @@ r_unknown = onto.add_relation(
     truth_value=TruthValue(value=TruthState.UNKNOWN)
 )
 
-# SUPERPOSITION with probability
-r_superposition = onto.add_relation(
-    REL,
-    roles={"subject": C, "object": A},
-    relation_type="PERMANENT",
-    truth_value=TruthValue(value=TruthState.SUPERPOSITION, probability=0.7)
-)
-
 # Relation with a different modality (e.g., Epistemic)
 r_epistemic = onto.add_relation(
     REL,
