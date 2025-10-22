@@ -10,6 +10,7 @@ class Ontology:
     """
     def __init__(self):
         self.entities = {}    # dict[str, Entity]: key = entity.id
+        self.alias_map = {}  # dict[str, Entity]: key = alias name
         self.predicates = {}  # dict[str, Predicate]
         self.relations = []   # list[Relation]
 
@@ -25,6 +26,60 @@ class Ontology:
             raise ValueError(f"Entity '{e.id}' already exists.")
         self.entities[e.id] = e
         return e
+
+    def add_alias(self, alias_name: str, target_entity: Entity):
+        """Register an alias purely for query purposes, supporting homonyms."""
+        alias_name = alias_name.upper()
+        if alias_name not in self.alias_map:
+            self.alias_map[alias_name] = []
+
+        # Avoid duplicates
+        if target_entity not in self.alias_map[alias_name]:
+            self.alias_map[alias_name].append(target_entity)
+
+        # Ensure the target entity also stores the alias
+        if alias_name not in target_entity.aliases:
+            target_entity.aliases.append(alias_name)
+
+    def resolve_entity(self, name: str):
+        """
+        Return all entities whose name or alias matches the query.
+        Homonyms are handled by returning multiple entities.
+        """
+        name = name.upper()
+        # Entities whose canonical name or alias matches
+        matches = [e for e in self.entities.values() if name in e.all_names()]
+
+        # Include any entities listed in alias_map
+        alias_matches = self.alias_map.get(name, [])
+        all_matches = list({*matches, *alias_matches})  # remove duplicates
+
+        return all_matches
+
+    def get_entity(self, name: str):
+        """
+        Retrieve an entity (or entities) by name or alias.
+
+        If multiple entities match (homonyms), returns the full list
+        so the parser or user can decide which one was intended.
+
+        Args:
+            name (str): The canonical name or alias to search for.
+
+        Returns:
+            Entity | list[Entity] | None:
+                - A single Entity if exactly one match is found.
+                - A list of Entities if multiple matches exist.
+                - None if no matches exist.
+        """
+        matches = self.resolve_entity(name)
+
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            return matches[0]
+        else:
+            return matches
 
     def add_predicate(self, name: str):
         """Create and register a new predicate."""
