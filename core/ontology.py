@@ -87,6 +87,36 @@ class Ontology:
         self.predicates[p.name] = p
         return p
 
+    def add_inverse_predicate(
+        self,
+        original_predicate: Predicate,
+        inverse_name: str,
+        role_mapping: dict[str, str]
+    ):
+        """
+        Add an inverse Predicate for the original predicate.
+
+        Args:
+            original_predicate: The Predicate to invert.
+            inverse_name: Name of the inverse predicate.
+            role_mapping: Dict mapping original roles -> inverse roles.
+        """
+        # Create the inverse Predicate
+        inverse_pred = Predicate(inverse_name, roles=list(role_mapping.values()))
+        inverse_pred.inverse_of = original_predicate
+        inverse_pred.role_mapping = role_mapping
+
+        # Register the inverse
+        original_predicate.inverses.append(inverse_pred)
+        self.predicates[inverse_pred.name] = inverse_pred
+
+        # Optionally: generate inverse Relations for existing Relations
+        for rel in self.relations:
+            if rel.predicate == original_predicate:
+                self._create_inverse_relation(rel, inverse_pred)
+
+        return inverse_pred
+    
     def add_relation(
         self,
         predicate,

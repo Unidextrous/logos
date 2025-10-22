@@ -7,6 +7,13 @@ class Predicate:
     def __init__(self, name: str, roles: list[str] | None = None):
         self.name = name.upper()
         self.roles = roles or []
+        self.inverses = []
+
+class PredicateInverse(Predicate):
+    def __init__(self, name, roles, inverse_of, role_mapping):
+        super().__init__(name, roles)
+        self.inverse_of = inverse_of       # original Predicate
+        self.role_mapping = role_mapping   # dict: original_role -> inverse_role
 
 class Relation:
     """
