@@ -8,16 +8,16 @@ class Entity:
     Attributes:
         name (str): Lexical form of the entity, e.g., "DOG".
         word_type (str): Part of speech or type, e.g., "NOUN".
-        entity_types (list[Entity]): Parent types (for inheritance hierarchy).
+        parents (list[Entity]): Parent types (for inheritance hierarchy).
         aliases list[str]: Alternative names for the entity.
         description (str | None): Optional human-readable description.
         id (str): Unique identifier (UUID-based) for the entity.
         relations (list[Relation]): Relations this entity directly participates in (propagated relations included).
     """
-    def __init__(self, name, word_type, entity_types=None, aliases=None, description=None):
+    def __init__(self, name, word_type, parents=None, aliases=None, description=None):
         self.name = name.upper()
         self.word_type = word_type.upper()
-        self.entity_types = entity_types or []
+        self.parents = parents or []
         self.aliases = [a.upper() for a in (aliases or [])]
         self.description = description
         self.id = f"{self.name}_{uuid.uuid4().hex[:8]}" # unique entity ID
@@ -35,10 +35,10 @@ class Entity:
         """
         if seen is None:
             seen = set()
-        for et in self.entity_types:
-            if et not in seen:
-                seen.add(et)
-                et.get_all_ancestors(seen)
+        for p in self.parents:
+            if p not in seen:
+                seen.add(p)
+                p.get_all_ancestors(seen)
         return seen
 
     def all_relations(self):

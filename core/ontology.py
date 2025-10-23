@@ -2,6 +2,7 @@
 from .entity import *
 from .relation import *
 from .temporal import *
+from .quantifier import *
 
 class Ontology:
     """
@@ -13,15 +14,16 @@ class Ontology:
         self.alias_map = {}  # dict[str, Entity]: key = alias name
         self.predicates = {}  # dict[str, Predicate]
         self.relations = []   # list[Relation]
+        self.quantified_propositions = []   # list[QuantifiedProposition]
 
-    def add_entity(self, name, word_type, entity_types=None, description=None):
+    def add_entity(self, name, word_type, parents=None, description=None):
         """
         Create and register a new entity.
 
         Returns:
             Entity: The newly created entity.
         """
-        e = Entity(name, word_type, entity_types, description)
+        e = Entity(name, word_type, parents, description)
         if e.id in self.entities:
             raise ValueError(f"Entity '{e.id}' already exists.")
         self.entities[e.id] = e
@@ -247,11 +249,11 @@ class Ontology:
             seen = set()
         indent = "    " * level + "└─" if level > 0 else ""
         desc_str = f" — {entity.description}" if show_description and entity.description else ""
-        print(f"{indent}{entity.name} ({', '.join([et.name for et in entity.entity_types])}){desc_str}")
+        print(f"{indent}{entity.name} ({', '.join([p.name for p in entity.parents])}){desc_str}")
         seen.add(entity.id)
-        for et in entity.entity_types:
-            if et.id not in seen:
-                self.describe_hierarchy(et, level=level+1, seen=seen, show_description=show_description)
+        for p in entity.parents:
+            if p.id not in seen:
+                self.describe_hierarchy(p, level=level+1, seen=seen, show_description=show_description)
 
     def refresh_context_relations(self):
         """
@@ -275,3 +277,35 @@ class Ontology:
         for r in self.relations:
             if getattr(r, "relation_type", None) == "CONTEXTUAL":
                 update_relation(r)
+
+    def add_quantified_proposition(
+        self,
+        quantifier: Quantifier,
+        variables: list[str],
+        proposition,  # typically a Relation or callable returning a Relation
+        truth_value=None
+    ):
+        """
+        Add a quantified proposition to the ontology.
+
+        Args:
+            quantifier (Quantifier): FORALL or EXISTS
+            variables (list[str]): list of variable names
+            proposition (Relation | callable): the relation template or function
+            truth_value (TruthValue | None): optional initial truth value
+
+        Returns:
+            QuantifiedProposition: the newly created object
+        """
+        qp = QuantifiedProposition(
+            quantifier=quantifier,
+            variables=variables,
+            proposition=proposition,
+            truth_value=truth_value
+        )
+
+        # Prevent duplicates (optional: check by string repr or object identity)
+        if qp not in self.quantified_propositions:
+            self.quantified_propositions.append(qp)
+
+        return qp
