@@ -85,8 +85,13 @@ class Ontology:
 
     def add_predicate(self, name: str):
         """Create and register a new predicate."""
+        name = name.upper()  # standardize
+
+        if name in self.predicates:
+            raise ValueError(f"Predicate '{name}' already exists.")
+
         p = Predicate(name)
-        self.predicates[p.name] = p
+        self.predicates[name] = p
         return p
 
     def add_inverse_predicate(
@@ -180,11 +185,8 @@ class Ontology:
         predicate,
         roles: dict,
         *,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
         relation_type: str = "GENERAL",
         context=None,
-        truth_value=None,
         default_truth=None
     ):
         """
