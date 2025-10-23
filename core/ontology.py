@@ -58,23 +58,52 @@ class Ontology:
 
         return all_matches
 
-    def get_entity(self, name: str):
+    def describe_hierarchy(self, entity, level=0, seen=None, show_description=False):
         """
-        Retrieve an entity (or entities) by name or alias.
+        Print entity hierarchy recursively with optional descriptions.
+        """
+        if seen is None:
+            seen = set()
+        indent = "    " * level + "└─" if level > 0 else ""
+        desc_str = f" — {entity.description}" if show_description and entity.description else ""
+        print(f"{indent}{entity.name} ({', '.join([p.name for p in entity.parents])}){desc_str}")
+        seen.add(entity.id)
+        for p in entity.parents:
+            if p.id not in seen:
+                self.describe_hierarchy(p, level=level+1, seen=seen, show_description=show_description)
 
-        If multiple entities match (homonyms), returns the full list
-        so the parser or user can decide which one was intended.
-
-        Args:
-            name (str): The canonical name or alias to search for.
+    def query_entities(
+        self,
+        name: str | None = None,
+        parent: str | None = None,
+        ancestor: str | None = None,
+        involved_in_relation: str | None = None
+    ):
+        """
+        Retrieve entities based on multiple optional filters:
+        - name: matches entity's name or aliases
+        - parent: matches direct parents
+        - ancestor: matches any ancestor recursively
+        - involved_in_relation: matches entities appearing in any relation
 
         Returns:
-            Entity | list[Entity] | None:
-                - A single Entity if exactly one match is found.
-                - A list of Entities if multiple matches exist.
-                - None if no matches exist.
+            Entity | list[Entity] | None
         """
-        matches = self.resolve_entity(name)
+        matches = []
+
+        for e in self.entities.values():
+            if name and not e.matches_name(name):
+                continue
+            if parent and not any(p.matches_name(parent) for p in e.parents):
+                continue
+            if ancestor and not any(a.matches_name(ancestor) for a in e.get_all_ancestors()):
+                continue
+            if involved_in_relation and not any(
+                involved_in_relation in [rel_entity.name for rel_entity in e.relations] or
+                any(involved_in_relation in rel_entity.aliases for rel_entity in e.relations)
+            ):
+                continue
+            matches.append(e)
 
         if not matches:
             return None
@@ -232,7 +261,7 @@ class Ontology:
             context.dependents.add(r)
 
         return r
-    
+
     def propagate_relation_to_descendants(self, relation):
         """
         Ensure descendants of any involved entities inherit this relation.
@@ -242,20 +271,6 @@ class Ontology:
             if any(ancestor in e.get_all_ancestors() for ancestor in involved):
                 if relation not in e.relations:
                     e.relations.append(relation)
-
-    def describe_hierarchy(self, entity, level=0, seen=None, show_description=False):
-        """
-        Print entity hierarchy recursively with optional descriptions.
-        """
-        if seen is None:
-            seen = set()
-        indent = "    " * level + "└─" if level > 0 else ""
-        desc_str = f" — {entity.description}" if show_description and entity.description else ""
-        print(f"{indent}{entity.name} ({', '.join([p.name for p in entity.parents])}){desc_str}")
-        seen.add(entity.id)
-        for p in entity.parents:
-            if p.id not in seen:
-                self.describe_hierarchy(p, level=level+1, seen=seen, show_description=show_description)
 
     def refresh_context_relations(self):
         """
@@ -299,3 +314,80 @@ class Ontology:
         )
         self.quantified_relations.append(qr)
         return qr
+
+    def query_relations(
+        self,
+        entity: str | None = None,
+        predicate: str | None = None,
+        truth_value: TruthValue | None = None,
+        variable: str | None = None,
+        moment: datetime | None = None
+    ):
+        """
+        Flexible query method to search for Relations and QuantifiedRelations.
+
+        Args:
+            entity (str, optional): Name or alias of an entity involved in the relation.
+            predicate (str, optional): Name of the predicate to filter by.
+            truth_value (TruthValue, optional): Filter by specific truth value.
+            variable (str, optional): Filter QuantifiedRelations by variable.
+            moment (datetime, optional): For TemporalRelations, check truth at this moment.
+
+        Returns:
+            list: Matching Relations or QuantifiedRelations.
+        """
+        results = []
+
+        # --- Relations ---
+        for r in self.relations:
+            # Entity filter
+            if entity:
+                if entity not in [e.name for e in r.roles.values()] and entity not in sum([e.aliases for e in r.roles.values()], []):
+                    continue
+
+            # Predicate filter
+            if predicate and r.predicate.name != predicate:
+                continue
+
+            # Truth filter
+            if truth_value:
+                tv = r.truth_value
+                if isinstance(r, TemporalRelation) and moment:
+                    interval = next((i for i in r.interval_truths if i.contains(moment)), None)
+                    if interval:
+                        tv = r.interval_truths[interval]
+                    else:
+                        tv = r.default_truth
+                if tv != truth_value:
+                    continue
+
+            results.append(r)
+
+        # --- QuantifiedRelations ---
+        for qr in getattr(self, "quantified_relations", []):
+            # Variable filter
+            if variable and variable not in qr.variables:
+                continue
+
+            # Entity filter
+            if entity:
+                involved = set()
+                for role_entity in qr.relation_template["roles"].values():
+                    if isinstance(role_entity, str):
+                        involved.add(role_entity)
+                    else:
+                        involved.add(role_entity.name)
+                if entity not in involved:
+                    continue
+
+            # Predicate filter
+            if predicate and qr.relation_template["predicate"] != predicate:
+                continue
+
+            # Truth filter
+            if truth_value and qr.truth_value != truth_value:
+                continue
+
+            results.append(qr)
+
+        return results if results else None

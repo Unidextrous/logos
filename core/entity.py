@@ -23,6 +23,11 @@ class Entity:
         self.description = description
         self.relations = []  # direct and propagated relations
 
+    def matches_name(self, query_name: str) -> bool:
+        """Check if the query_name matches the primary name or any alias."""
+        query_upper = query_name.upper()
+        return query_upper == self.name or query_upper in self.aliases
+    
     def get_all_ancestors(self, seen=None):
         """
         Recursively return all ancestor entities in the hierarchy.
@@ -87,6 +92,6 @@ class Entity:
             e.parents = [ontology.entities[parent_id] for parent_id in data["parents"] if parent_id in ontology.entities]
 
         return e
-    
+        
     def __repr__(self):
         return f"Entity({self.name})"
