@@ -4,7 +4,6 @@ from typing import Optional, List
 from .relation import Relation
 from .truth import TruthState, TruthValue
 
-
 class TimeInterval:
     """
     Represents a period of time with an optional start and end.
@@ -35,6 +34,18 @@ class TimeInterval:
         if end_time is not None:
             self.end_time = end_time
 
+    def to_dict(self):
+        return {
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        start = datetime.fromisoformat(data["start_time"]) if data.get("start_time") else None
+        end = datetime.fromisoformat(data["end_time"]) if data.get("end_time") else None
+        return cls(start, end)
+    
     def __repr__(self):
         return f"<TimeInterval {self.start_time} → {self.end_time}>"
 
@@ -104,20 +115,42 @@ class TemporalRelation(Relation):
                 return (interval, tv)
         return None
 
-
     def to_dict(self):
         base = super().to_dict()
         base.update({
             "default_truth": self.default_truth.to_dict() if self.default_truth else None,
+            "interval_truths": [
+                {
+                    "start_time": i.start_time.isoformat() if i.start_time else None,
+                    "end_time": i.end_time.isoformat() if i.end_time else None,
+                    "truth_value": tv.to_dict() if tv else None
+                }
+                for i, tv in self.interval_truths.items()
+            ]
         })
         return base
 
     @classmethod
     def from_dict(cls, data, ontology):
-        r = super().from_dict(data, ontology)
-        r.default_truth = TruthValue.from_dict(data["default_truth"]) if data.get("default_truth") else None
+        # Reconstruct the base Relation
+        predicate = ontology.predicates[data["predicate"]]
+        roles = {role_name: ontology.entities[ent_id] for role_name, ent_id in data["roles"].items()}
+        context = data.get("context")
+        default_truth = TruthValue.from_dict(data["default_truth"]) if data.get("default_truth") else None
+
+        r = cls(predicate, roles, relation_type=data.get("relation_type", "GENERAL"),
+                context=context, default_truth=default_truth)
+
+        # Reconstruct interval_truths
+        for interval_dict in data.get("interval_truths", []):
+            start = datetime.fromisoformat(interval_dict["start_time"]) if interval_dict.get("start_time") else None
+            end = datetime.fromisoformat(interval_dict["end_time"]) if interval_dict.get("end_time") else None
+            interval = TimeInterval(start, end)
+            tv = TruthValue.from_dict(interval_dict["truth_value"]) if interval_dict.get("truth_value") else TruthValue()
+            r.interval_truths[interval] = tv
+
         return r
-    
+
     # ──────────────────────────────────────────────
     # Representation
     # ──────────────────────────────────────────────

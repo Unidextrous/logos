@@ -2,9 +2,9 @@
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from datetime import datetime, timedelta
 from core.ontology import Ontology
-from core.entity import Entity
-from core.relation import Relation, Predicate
+from core.temporal import TimeInterval, TemporalRelation
 from core.quantifier import Quantifier
 from core.truth import TruthValue, TruthState
 from core.save_load import save_ontology, load_ontology
@@ -54,6 +54,18 @@ def test_save_load():
         truth_value=TruthValue(TruthState.TRUE)
     )
 
+    # --- Create temporal relation ---
+    tr = TemporalRelation(predicate=EATS, roles={"subject": DEX, "object": FOOD})
+    
+    now = datetime.now()
+    interval1 = TimeInterval(start_time=now, end_time=now + timedelta(hours=1))
+    interval2 = TimeInterval(start_time=now + timedelta(hours=1), end_time=now + timedelta(hours=2))
+
+    tr.add_interval(interval1, TruthValue(TruthState.TRUE))
+    tr.add_interval(interval2, TruthValue(TruthState.FALSE))
+
+    ontology.relations.append(tr)
+
     # --- Save ontology ---
     save_ontology(ontology, "ontology_test.json")
 
@@ -68,7 +80,6 @@ def test_save_load():
     assert any(qr.quantifier == Quantifier.EXISTS for qr in new_ontology.quantified_relations)
 
     print("Save/load test passed!")
-    for r in new_ontology.relations:
-        print(r)
+
 if __name__ == "__main__":
     test_save_load()

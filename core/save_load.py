@@ -3,6 +3,7 @@ import json
 from .ontology import Ontology
 from .entity import Entity
 from .relation import Predicate, Relation
+from .temporal import TemporalRelation
 from .quantifier import QuantifiedRelation
 
 def save_ontology(ontology: Ontology, filepath: str):
@@ -41,7 +42,10 @@ def load_ontology(filepath: str) -> Ontology:
 
     # Reconstruct relations
     for r_dict in data.get("relations", []):
-        r = Relation.from_dict(r_dict, ontology)
+        if r_dict.get("relation_type") == "TEMPORAL":
+            r = TemporalRelation.from_dict(r_dict, ontology)
+        else:
+            r = Relation.from_dict(r_dict, ontology)
         ontology.relations.append(r)
         for e in r.roles.values():
             e.relations.append(r)
