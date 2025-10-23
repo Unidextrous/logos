@@ -64,7 +64,7 @@ class TemporalRelation(Relation):
         predicate,
         roles: dict,
         *,
-        relation_type: str = "TEMPORAL",
+        relation_type: str = "GENERAL",
         context=None,
         default_truth: TruthValue | None = None
     ):

@@ -317,21 +317,21 @@ class Ontology:
 
     def query_relations(
         self,
-        entity: str | None = None,
+        relation_type: str | None = None,
+        entities: list[str] | None = None,
         predicate: str | None = None,
+        moment: datetime | None = None,
         truth_value: TruthValue | None = None,
-        variable: str | None = None,
-        moment: datetime | None = None
     ):
         """
         Flexible query method to search for Relations and QuantifiedRelations.
 
         Args:
-            entity (str, optional): Name or alias of an entity involved in the relation.
+            relation_type (str, optional): Filter by relation_type attribute (e.g., "GENERAL", "CONTEXTUAL").
+            entities (list[str], optional): One or more entity names/aliases involved in the relation.
             predicate (str, optional): Name of the predicate to filter by.
-            truth_value (TruthValue, optional): Filter by specific truth value.
-            variable (str, optional): Filter QuantifiedRelations by variable.
             moment (datetime, optional): For TemporalRelations, check truth at this moment.
+            truth_value (TruthValue, optional): Filter by specific truth value.
 
         Returns:
             list: Matching Relations or QuantifiedRelations.
@@ -340,9 +340,17 @@ class Ontology:
 
         # --- Relations ---
         for r in self.relations:
+            # Relation type filter
+            if relation_type and getattr(r, "relation_type", None) != relation_type:
+                continue
+            
             # Entity filter
-            if entity:
-                if entity not in [e.name for e in r.roles.values()] and entity not in sum([e.aliases for e in r.roles.values()], []):
+            if entities:
+                relation_entities = [
+                    e.name for e in r.roles.values()
+                ] + sum([e.aliases for e in r.roles.values()], [])
+                # Must contain *all* entities in the query
+                if not all(ent in relation_entities for ent in entities):
                     continue
 
             # Predicate filter
@@ -365,19 +373,19 @@ class Ontology:
 
         # --- QuantifiedRelations ---
         for qr in getattr(self, "quantified_relations", []):
-            # Variable filter
-            if variable and variable not in qr.variables:
+            # Relation type filter (pass)
+            if relation_type:
                 continue
 
             # Entity filter
-            if entity:
+            if entities:
                 involved = set()
                 for role_entity in qr.relation_template["roles"].values():
                     if isinstance(role_entity, str):
                         involved.add(role_entity)
                     else:
                         involved.add(role_entity.name)
-                if entity not in involved:
+                if not all(ent in involved for ent in entities):
                     continue
 
             # Predicate filter

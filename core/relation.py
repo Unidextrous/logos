@@ -93,7 +93,7 @@ class Relation:
         self.truth_value = truth_value or TruthValue(value=TruthState.UNKNOWN)
         self.dependents = set()
 
-    def evaluate_truth(self) -> TruthState:
+    def evaluate_truth(self) -> TruthValue:
         """Evaluate the current truth of this relation based on context."""
         # Context can override the base truth_value
         if isinstance(self.context, Relation):
@@ -105,9 +105,9 @@ class Relation:
             return self.context()
         elif self.context is not None:
             # Wrap raw values into a TruthValue
-            return TruthValue(self.context).value
+            return TruthValue(self.context)
 
-        return self.truth_value.value
+        return self.truth_value
 
     def update_from_context(self):
         """Re-evaluate truth_value based on context and propagate to dependents."""
