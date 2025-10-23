@@ -23,7 +23,9 @@ logos/
 │   ├── relation.py        # Handles links between entities
 │   ├── context.py         # Logical contexts and compound relation evaluation
 │   ├── temporal.py        # Temporal relations and time interval management
-│   └── ontology.py        # Data model that stores all entities/relations
+│   ├── quantifier.py      # QuantifiedRelation logic
+│   ├── ontology.py        # Data model that stores all entities/relations
+│   └── save_load.py       # Save/load ontology and quantified relations to JSON
 │
 ├── parser/
 │   ├── __init__.py
