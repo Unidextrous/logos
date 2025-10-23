@@ -8,9 +8,9 @@ class Quantifier(Enum):
     FORALL = "FORALL"
     EXISTS = "EXISTS"
 
-class QuantifiedProposition:
+class QuantifiedRelation:
     """
-    Represents a quantified logical proposition, e.g.,
+    Represents a quantified logical relation, e.g.,
     FORALL X: LOVES(X, TONYA)
     EXISTS Y: OWNS(DEX, Y)
     """
@@ -18,7 +18,7 @@ class QuantifiedProposition:
         """
         Args:
             quantifier (Quantifier): FORALL or EXISTS
-            variables (list[str]): Variable names used in the proposition, e.g., ["X"]
+            variables (list[str]): Variable names used in the relation, e.g., ["X"]
             relation_template: {
                 "predicate": str,
                 "roles": dict where some values can be "$variable"
@@ -66,7 +66,7 @@ class QuantifiedProposition:
         )
     
     def __eq__(self, other):
-        if not isinstance(other, QuantifiedProposition):
+        if not isinstance(other, QuantifiedRelation):
             return False
         return (
             self.quantifier == other.quantifier and
@@ -88,9 +88,9 @@ class QuantifiedProposition:
         Recursively converts dicts into tuples of key-value pairs.
         """
         if isinstance(template, dict):
-            return tuple((k, QuantifiedProposition._flatten_template(v)) for k, v in template.items())
+            return tuple((k, QuantifiedRelation._flatten_template(v)) for k, v in template.items())
         elif isinstance(template, list):
-            return tuple(QuantifiedProposition._flatten_template(x) for x in template)
+            return tuple(QuantifiedRelation._flatten_template(x) for x in template)
         else:
             return template
         

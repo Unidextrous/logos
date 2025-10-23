@@ -14,7 +14,7 @@ class Ontology:
         self.alias_map = {}  # dict[str, Entity]: key = alias name
         self.predicates = {}  # dict[str, Predicate]
         self.relations = []   # list[Relation]
-        self.quantified_propositions = []   # list[QuantifiedProposition]
+        self.quantified_relations = []   # list[QuantifiedRelation]
 
     def add_entity(self, name, word_type, parents=None, description=None):
         """
@@ -280,7 +280,7 @@ class Ontology:
             if getattr(r, "relation_type", None) == "CONTEXTUAL":
                 update_relation(r)
 
-    def add_quantified_proposition(self, quantifier, variables, relation_template, truth_value=None):
+    def add_quantified_relation(self, quantifier, variables, relation_template, truth_value=None):
         """
         relation_template: dict, e.g.
         {
@@ -291,11 +291,11 @@ class Ontology:
             }
         }
         """
-        qp = QuantifiedProposition(
+        qr = QuantifiedRelation(
             quantifier=quantifier,
             variables=variables,
             relation_template=relation_template,
             truth_value=truth_value
         )
-        self.quantified_propositions.append(qp)
-        return qp
+        self.quantified_relations.append(qr)
+        return qr

@@ -3,7 +3,7 @@ import json
 from .ontology import Ontology
 from .entity import Entity
 from .relation import Predicate, Relation
-from .quantifier import QuantifiedProposition
+from .quantifier import QuantifiedRelation
 
 def save_ontology(ontology: Ontology, filepath: str):
     """
@@ -13,7 +13,7 @@ def save_ontology(ontology: Ontology, filepath: str):
         "entities": [e.to_dict() for e in ontology.entities.values()],
         "predicates": [p.to_dict() for p in ontology.predicates.values()],
         "relations": [r.to_dict() for r in ontology.relations],
-        "quantified_propositions": [qp.to_dict() for qp in getattr(ontology, "quantified_propositions", [])],
+        "quantified_relations": [qr.to_dict() for qr in getattr(ontology, "quantified_relations", [])],
     }
 
     with open(filepath, "w", encoding="utf-8") as f:
@@ -46,10 +46,10 @@ def load_ontology(filepath: str) -> Ontology:
         for e in r.roles.values():
             e.relations.append(r)
 
-    # Reconstruct quantified propositions
-    ontology.quantified_propositions = []
-    for qp_dict in data.get("quantified_propositions", []):
-        qp = QuantifiedProposition.from_dict(qp_dict, ontology)
-        ontology.quantified_propositions.append(qp)
+    # Reconstruct quantified relations
+    ontology.quantified_relations = []
+    for qr_dict in data.get("quantified_relations", []):
+        qr = QuantifiedRelation.from_dict(qr_dict, ontology)
+        ontology.quantified_relations.append(qr)
 
     return ontology

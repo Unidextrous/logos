@@ -27,8 +27,8 @@ def test_save_load():
         truth_value=TruthValue(TruthState.TRUE)
     )
 
-    # --- Create quantified propositions using templates ---
-    DEX_EATS_EVERYTHING = ontology.add_quantified_proposition(
+    # --- Create quantified relations using templates ---
+    DEX_EATS_EVERYTHING = ontology.add_quantified_relation(
         quantifier=Quantifier.FORALL,
         variables=["X"],
         relation_template={
@@ -41,7 +41,7 @@ def test_save_load():
         truth_value=TruthValue(TruthState.FALSE)
     )
 
-    DEX_EATS_SOMETHING = ontology.add_quantified_proposition(
+    DEX_EATS_SOMETHING = ontology.add_quantified_relation(
         quantifier=Quantifier.EXISTS,
         variables=["Y"],
         relation_template={
@@ -64,8 +64,8 @@ def test_save_load():
     assert "DEX" in [e.name for e in new_ontology.entities.values()]
     assert "FOOD" in [e.name for e in new_ontology.entities.values()]
     assert any(r.predicate.name == "EATS" for r in new_ontology.relations)
-    assert any(qp.quantifier == Quantifier.FORALL for qp in new_ontology.quantified_propositions)
-    assert any(qp.quantifier == Quantifier.EXISTS for qp in new_ontology.quantified_propositions)
+    assert any(qr.quantifier == Quantifier.FORALL for qr in new_ontology.quantified_relations)
+    assert any(qr.quantifier == Quantifier.EXISTS for qr in new_ontology.quantified_relations)
 
     print("Save/load test passed!")
     for r in new_ontology.relations:
