@@ -16,30 +16,26 @@ class TruthState(Enum):
 class TruthValue:
     """
     Represents a truth under a modality.
-    Supports TRUE, FALSE, UNKNOWN with optional probability metadata.
+    Supports TRUE, FALSE, UNKNOWN with optional certainty metadata.
     """
 
     def __init__(
         self,
         value: TruthState = TruthState.UNKNOWN,
         modality: Modality = Modality.ALETHIC,
-        probability: float | None = None 
+        certainty: float | None = None 
     ):
         self.value = value
         self.modality = modality
-        self.probability = probability
+        self.certainty = certainty
 
-    def evaluate(self, sample_probability: bool = False) -> TruthState:
-        """
-        Return the current TruthState.
-        - If sample_probability=True, collapse probabilistically.
-        - UNKNOWN remains as UNKNOWN.
-        """
-        if sample_probability:
-            if self.probability is not None:
-                return TruthState.TRUE if random.random() <= self.probability else TruthState.FALSE
-        return self.value
+    def to_dict(self):
+        return {"value": self.value.value, "certainty": getattr(self, "certainty", None)}
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(value=TruthState(data["value"]))
+    
     def __repr__(self):
-        prob_str = f", probability={self.probability}" if self.probability is not None else ""
+        prob_str = f", certainty={self.certainty}" if self.certainty is not None else ""
         return f"<TruthValue(modality={self.modality}, value={self.value.name}{prob_str})>"

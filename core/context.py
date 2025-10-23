@@ -1,5 +1,6 @@
 # context.py
 from __future__ import annotations
+import uuid
 from typing import Union, Callable
 from .truth import TruthState, TruthValue, Modality  # Make sure Modality is imported
 
@@ -17,9 +18,10 @@ class RelationContext:
           - a (operator, operands) tuple representing a logical tree
           - a Relation or RelationContext object
         """
+        self.id = f"CTX_{uuid.uuid4().hex[:8]}"
         self.condition = condition
 
-    def evaluate(self, sample_probability: bool = False) -> TruthValue:
+    def evaluate(self) -> TruthValue:
         """Recursively evaluate the logical condition and return a TruthValue."""
         # --- Callable case ---
         if callable(self.condition):
@@ -36,12 +38,12 @@ class RelationContext:
                 tv = self.condition.evaluate_truth()
                 return tv if isinstance(tv, TruthValue) else TruthValue(tv)
             elif isinstance(self.condition, RelationContext):
-                return self.condition.evaluate(sample_probability=sample_probability)
+                return self.condition.evaluate()
             return TruthValue(value=TruthState.TRUE if bool(self.condition) else TruthState.FALSE)
 
         # --- Logical tree (operator, operands) ---
         op, *args = self.condition
-        vals = [RelationContext.ensure(a).evaluate(sample_probability=sample_probability) for a in args]
+        vals = [RelationContext.ensure(a).evaluate() for a in args]
 
         # --- Logic operations ---
         if op == "NOT":
@@ -68,17 +70,21 @@ class RelationContext:
             return TruthValue(TruthState.UNKNOWN)
 
         elif op == "XOR":
+            if any(v.value == TruthState.UNKNOWN for v in vals):
+                return TruthValue(TruthState.UNKNOWN)
             true_count = sum(v.value == TruthState.TRUE for v in vals)
             return TruthValue(TruthState.TRUE if true_count % 2 == 1 else TruthState.FALSE)
 
         elif op == "NAND":
-            return RelationContext(("NOT", ("AND", *args))).evaluate(sample_probability=sample_probability)
+            return RelationContext(("NOT", ("AND", *args))).evaluate()
 
         elif op == "NOR":
-            return RelationContext(("NOT", ("OR", *args))).evaluate(sample_probability=sample_probability)
+            return RelationContext(("NOT", ("OR", *args))).evaluate()
 
         elif op == "XNOR":
-            return RelationContext(("NOT", ("XOR", *args))).evaluate(sample_probability=sample_probability)
+            if any(v.value == TruthState.UNKNOWN for v in vals):
+                return TruthValue(TruthState.UNKNOWN)
+            return RelationContext(("NOT", ("XOR", *args))).evaluate()
 
         else:
             raise ValueError(f"Unknown logical operator: {op}")
@@ -116,6 +122,20 @@ class RelationContext:
             return RelationContext(value)
         raise TypeError(f"Cannot wrap {value} into RelationContext")
 
+    def to_dict(self):
+        return {
+            "id": getattr(self, "id", None),
+            "description": getattr(self, "description", None),
+            "truth_value": self.truth_value.to_dict() if self.truth_value else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        rc = cls(description=data.get("description"))
+        rc.truth_value = TruthValue.from_dict(data["truth_value"]) if data.get("truth_value") else None
+        rc.id = data.get("id")
+        return rc
+    
     def __repr__(self):
         if callable(self.condition):
             return "<RelationContext(callable)>"

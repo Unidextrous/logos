@@ -280,34 +280,22 @@ class Ontology:
             if getattr(r, "relation_type", None) == "CONTEXTUAL":
                 update_relation(r)
 
-    def add_quantified_proposition(
-        self,
-        quantifier: Quantifier,
-        variables: list[str],
-        proposition,  # typically a Relation or callable returning a Relation
-        truth_value=None
-    ):
+    def add_quantified_proposition(self, quantifier, variables, relation_template, truth_value=None):
         """
-        Add a quantified proposition to the ontology.
-
-        Args:
-            quantifier (Quantifier): FORALL or EXISTS
-            variables (list[str]): list of variable names
-            proposition (Relation | callable): the relation template or function
-            truth_value (TruthValue | None): optional initial truth value
-
-        Returns:
-            QuantifiedProposition: the newly created object
+        relation_template: dict, e.g.
+        {
+            "predicate": "EATS",
+            "roles": {
+                "subject": "DEX",
+                "object": "$X"
+            }
+        }
         """
         qp = QuantifiedProposition(
             quantifier=quantifier,
             variables=variables,
-            proposition=proposition,
+            relation_template=relation_template,
             truth_value=truth_value
         )
-
-        # Prevent duplicates (optional: check by string repr or object identity)
-        if qp not in self.quantified_propositions:
-            self.quantified_propositions.append(qp)
-
+        self.quantified_propositions.append(qp)
         return qp

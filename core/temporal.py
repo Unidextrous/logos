@@ -88,13 +88,13 @@ class TemporalRelation(Relation):
     # Temporal Logic
     # ──────────────────────────────────────────────
 
-    def truth_value_at(self, moment: datetime | None = None, sample_probability: bool = False) -> TruthState:
+    def truth_value_at(self, moment: datetime | None = None) -> TruthState:
         if moment is None:
             moment = datetime.now()
         interval = next((i for i in self.interval_truths if i.contains(moment)), None)
         if interval is None:
-            return self.default_truth.evaluate(sample_probability=sample_probability)
-        return self.interval_truths[interval].evaluate(sample_probability=sample_probability)
+            return self.default_truth.evaluate()
+        return self.interval_truths[interval].evaluate()
 
     def get_current_interval(self) -> tuple[TimeInterval, TruthValue] | None:
         """Return the current interval and its TruthValue, if any."""
@@ -104,6 +104,20 @@ class TemporalRelation(Relation):
                 return (interval, tv)
         return None
 
+
+    def to_dict(self):
+        base = super().to_dict()
+        base.update({
+            "default_truth": self.default_truth.to_dict() if self.default_truth else None,
+        })
+        return base
+
+    @classmethod
+    def from_dict(cls, data, ontology):
+        r = super().from_dict(data, ontology)
+        r.default_truth = TruthValue.from_dict(data["default_truth"]) if data.get("default_truth") else None
+        return r
+    
     # ──────────────────────────────────────────────
     # Representation
     # ──────────────────────────────────────────────
