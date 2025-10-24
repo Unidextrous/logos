@@ -27,11 +27,15 @@ logos/
 │   ├── ontology.py        # Data model that stores all entities/relations
 │   └── save_load.py       # Save/load ontology and quantified relations to JSON
 │
-├── parser/
+├── syntax/
 │   ├── __init__.py
-│   └── parser.py          # Parses Logos expressions into syntax trees
-│
-├── reasoning/
+│   ├── syntax.txt           # Reference of Logos syntax rules (human-readable)
+│   ├── lexer.py             # Tokenizes raw Logos code into lexemes
+│   ├── parser.py            # Converts tokens into abstract syntax trees (ASTs)
+│   ├── validator.py         # Checks ASTs for structural correctness and local contradictions
+│   ├── transformer.py       # Optional: transforms or simplifies ASTs for reasoning engine
+│   ├── interpreter.py       # Optional: executes/evaluates simple Logos expressions directly
+│   ├── reasoning/
 │   ├── __init__.py
 │   ├── semantics.py       # Meaning resolution, truth evaluation
 │   └── inference.py       # Logical inference and deduction
