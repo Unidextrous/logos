@@ -43,21 +43,6 @@ class Ontology:
         if alias_name not in target_entity.aliases:
             target_entity.aliases.append(alias_name)
 
-    def resolve_entity(self, name: str):
-        """
-        Return all entities whose name or alias matches the query.
-        Homonyms are handled by returning multiple entities.
-        """
-        name = name.upper()
-        # Entities whose canonical name or alias matches
-        matches = [e for e in self.entities.values() if name in e.all_names()]
-
-        # Include any entities listed in alias_map
-        alias_matches = self.alias_map.get(name, [])
-        all_matches = list({*matches, *alias_matches})  # remove duplicates
-
-        return all_matches
-
     def describe_hierarchy(self, entity, level=0, seen=None, show_description=False):
         """
         Print entity hierarchy recursively with optional descriptions.
@@ -153,6 +138,32 @@ class Ontology:
 
         return inverse_pred
     
+    def query_predicates(
+        self,
+        name: str | None = None,
+        roles: list[str] | None = None
+    ):
+        """
+        Query PREDICATE objects by name and/or role names.
+
+        Args:
+            name (str, optional)
+            roles (list[str], optional): Role names the predicate must include
+
+        Returns:
+            list: Matching Predicate objects or None
+        """
+        results = []
+
+        for p in getattr(self, "predicates", []):
+            if name and p.name != name:
+                continue
+            if roles and not all(role in p.roles for role in roles):
+                continue
+            results.append(p)
+
+        return results if results else None
+
     def add_relation(
         self,
         predicate,
@@ -318,8 +329,9 @@ class Ontology:
     def query_relations(
         self,
         relation_type: str | None = None,
-        entities: list[str] | None = None,
         predicate: str | None = None,
+        roles: list[str] | None = None,
+        entities: list[str] | None = None,
         moment: datetime | None = None,
         truth_value: TruthValue | None = None,
     ):
@@ -328,8 +340,9 @@ class Ontology:
 
         Args:
             relation_type (str, optional): Filter by relation_type attribute (e.g., "GENERAL", "CONTEXTUAL").
-            entities (list[str], optional): One or more entity names/aliases involved in the relation.
             predicate (str, optional): Name of the predicate to filter by.
+            entities (list[str], optional): One or more entity names/aliases involved in the relation.
+            roles (list[str], optional): Only match relations containing these role names
             moment (datetime, optional): For TemporalRelations, check truth at this moment.
             truth_value (TruthValue, optional): Filter by specific truth value.
 
@@ -342,6 +355,10 @@ class Ontology:
         for r in self.relations:
             # Relation type filter
             if relation_type and getattr(r, "relation_type", None) != relation_type:
+                continue
+                
+            # Role filter
+            if roles and not all(role in r.roles for role in roles):
                 continue
             
             # Entity filter
@@ -377,6 +394,11 @@ class Ontology:
             if relation_type:
                 continue
 
+            # Role filter
+            if roles:
+                if not all(role in qr.relation_template["roles"] for role in roles):
+                    continue
+                
             # Entity filter
             if entities:
                 involved = set()
