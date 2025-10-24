@@ -1,0 +1,210 @@
+# Logos Syntax Specification
+
+1. Comments
+    Single-line: # comment
+    Multi-line: /* comment */
+
+2. Whitespace
+    Whitespace and indentation are not semantically required, but indentation is encouraged for clarity.
+    Statements may be written on one line or multiple lines.
+
+3. Identifiers and Variables
+    Identifiers must begin with a letter or underscore, followed by letters, digits, or underscores.
+    Variables are dynamically typed.
+
+    Assignment:
+    x = 10
+    name = "Dex"
+
+    Reassignment is allowed:
+    x = x + 5
+
+4. Data Types
+    Primitive Types:
+        TRUE, FALSE, UNKNOWN — ternary truth values
+        Numbers: 42, 3.14
+        Strings: "Hello" or 'World'
+        Entities: Capitalized identifiers like CAT, FIDO, LOGOS
+        Predicates: Capitalized identifiers like IS, LOVES, HAS
+    Composite Types:
+        Lists: [1, 2, 3]
+        Maps: {key: value, other: 2}
+        Sets: <1, 2, 3>
+        Relations
+            RELATION <RELATION_TYPE (Optional, default: GENERAL)> <PREDICATE> {ROLES: [<ROLES: ENTITIES>], CONTEXT: <RELATION_CONTEXT>, TRUTH: <TRUTH_VALUE>}
+        TimeIntervals
+            TIME_INTERVAL [<START_TIME>, <END_TIME>]
+        TemporalRelations
+            TEMPORAL_RELATION <RELATION_TYPE (Optional, default: GENERAL)> <PREDICATE> {ROLES: [<ROLES: ENTITIES>], CONTEXT: <RELATION_CONTEXT>, TRUTH: <TRUTH_VALUE>}
+        Contexts
+            RELATION_CONTEXT {EXPRESSION: <EXPRESSION>}
+        QuantifiedRelations
+
+
+5. Operators
+    Arithmetic: +, -, *, /, %, **
+    Comparison: ==, !=, >, <, >=, <=
+    Logical: AND, OR, NOT
+    Implication: IF ... THEN ..., ELIF, ELSE
+    Membership: IN, NOT IN
+    Concatenation: + (for strings and lists)
+
+6. Control Flow
+    Conditional:
+        IF <condition> THEN <expression>
+        ELIF <condition> THEN <expression>
+        ELSE <expression>
+    Loops:
+        FOR <var> IN <iterable> THEN <expression>
+        WHILE <condition> THEN <expression>
+
+7. Functions
+    Definition:
+        DEF greet(name):
+            RETURN "Hello, " + name
+    Invocation:
+        greet("Dex")
+        Anonymous (lambda) function:
+        fn = (x) => x * 2
+
+8. Pattern Matching
+    CASE value OF
+        1: "one"
+        2: "two"
+        _: "other"
+    END
+
+9. Ontology Management
+    Declaration:
+        ENTITY <NAME> {
+            WORD_TYPE: <WORD_TYPE>,
+            ALIASES: [<ALIAS1>, <ALIAS2>, ...],
+            PARENTS: [<PARENT1>, <PARENT2>, ...]
+        }
+        PREDICATE <NAME> {
+            ROLES: [<ROLE1>: <ENTITY1>, <ROLE2>: <ENTITY2>, ...]
+        }
+        <TYPE (OPTIONAL; DEFAULT: GENERAL)> RELATION <PREDICATE> {
+            ROLES: [<ROLE1>: <ENTITY1>, <ROLE2>: <ENTITY2>, ...],
+            CONTEXT: <RELATION_CONTEXT>,
+            TRUTH: <TRUTH_VALUE>
+        }
+        <TYPE (OPTIONAL; DEFAULT: GENERAL)> TEMPORAL_RELATION <PREDICATE> {
+            ROLES: [<ROLE1>: <ENTITY1>, <ROLE2>: <ENTITY2>, ...],
+            CONTEXT: <RELATION_CONTEXT>,
+            TRUTH: <TRUTH_VALUE>
+        }
+        TIME_INTERVAL {
+            RELATION: <PREDICATE>,
+            FROM: <START_TIME>,
+            TO: <END_TIME>
+        }
+        RELATION_CONTEXT {
+            EXPRESSION: <EXPRESSION>
+        }
+        QUANTIFIED_RELATION <PREDICATE> {
+            QUANTIFIER: <FORALL | EXISTS>,
+            VARIABLES: [<VAR1>, <VAR2>, ...],
+            RELATION_TEMPLATE: <RELATION_WITH_VARIABLES>,
+            TRUTH: <TRUTH_VALUE>
+        }
+    Serialization:
+        SAVE_ONTOLOGY "FILE_NAME.json"
+        LOAD_ONTOLOGY "FILE_NAME.json", MERGE: <TRUE | FALSE>
+    Querying
+        QUERY statements return a list of matching objects or UNKNOWN if no match.
+        QUERY ENTITY WHERE {
+            NAME="<NAME>",
+            WORD_TYPE=<WORD_TYPE>,
+            PARENTS=[...],
+            ANCESTORS=[...],
+            RELATIONS=[...]
+        }
+        QUERY RELATION WHERE {
+            TYPE=<RELATION_TYPE>,
+            PREDICATE=<PREDICATE>,
+            ROLES=[...],
+            ENTITIES=[...],
+            TRUTH=<TRUTH_VALUE>
+        }
+        QUERY TEMPORAL_RELATION WHERE {
+            TYPE=<RELATION_TYPE>,
+            PREDICATE=<PREDICATE>,
+            ROLES=[...],
+            ENTITIES=[...],
+            DEFAULT_TRUTH=<TRUTH_VALUE>,
+            TIME_INTERVALS=[...]
+        }
+        QUERY QUANTIFIED_RELATION WHERE {
+            QUANTIFIER=<FORALL or EXISTS>,
+            PREDICATE=<PREDICATE>,
+            ROLES: [...],
+            ENTITIES=[...],
+            TRUTH: <TRUTH_VALUE>
+        }
+    User-accessible functions:
+        ADD_ALIAS(<ENTITY>, <ALIAS>)
+        DESCRIBE_HIERARCHY(<ENTITY>)
+        ADD_INVERSE_PREDICATE(<PREDICATE1>, <PREDICATE2>, ROLE_MAPPING={PRED1_ROLES: PRED2_ROLES})
+
+10. Case Sensitivity
+    Logos is case-insensitive for keywords.
+    Entity and variable names preserve case for readability but are internally normalized.
+
+11. Syntax Flexibility
+Logos is terminal-friendly; code may be written on a single line.
+    Human-readable relation names are standardized per relation type.
+    Example compact form:
+        IF ISDOG(FIDO) THEN BARK(FIDO)
+
+12. Data Structures
+    Lists:
+        nums = [1, 2, 3]
+        APPEND(nums, 4)
+        LEN(nums)         # → 4
+    Maps:
+        person = {name: "Dex", age: 27}
+        person.name       # → "Dex"
+        SET(person, "age", 28)
+    Sets:
+        animals = <DOG, CAT, BIRD>
+        ADD(animals, "FISH")
+        CONTAINS(animals, "DOG")  # TRUE
+    Relations:
+        FRIEND(ALICE, BOB)
+
+13. Built-in Functions
+    Type and Conversion:
+        TYPE(x)        # returns type name as string
+        INT("42")      # → 42
+        STR(42)        # → "42"
+        BOOL(UNKNOWN)  # → FALSE
+        LIST(<1, 2, 3>)# → [1, 2, 3]
+
+    String Utilities:
+        LEN("Hello")               # → 5
+        UPPER("log")               # → "LOG"
+        LOWER("DOG")               # → "dog"
+        SPLIT("a,b,c", ",")        # → ["a", "b", "c"]
+        JOIN(["a","b","c"], ",")   # → "a,b,c"
+
+    Math:
+        ABS(-5)        # → 5
+        ROUND(3.14)    # → 3
+        MAX(1, 2, 3)   # → 3
+        MIN(1, 2, 3)   # → 1
+        RANDOM()       # → random float between 0 and 1
+
+    Collections:
+        LEN([1, 2, 3])           # → 3
+        APPEND(list, value)
+        REMOVE(list, value)
+        MAP(list, fn)
+        FILTER(list, fn)
+
+14. Truth Values and Evaluation
+    Logos uses ternary logic:
+        TRUE, FALSE, UNKNOWN
+    Comparison and logical operations propagate UNKNOWN:
+        TRUE AND UNKNOWN   # → UNKNOWN
+        UNKNOWN OR FALSE   # → UNKNOWN
