@@ -153,6 +153,5 @@ class Relation:
         return r
     
     def __repr__(self):
-        roles_str = ", ".join([f"{k}={v.name}" for k, v in self.roles.items()])
-        ctx = f", context={self.context}" if self.context else ""
-        return f"Relation({self.predicate_name}: {roles_str}, type={self.relation_type}{ctx}, truth={self.truth_value})"
+        role_values_str = ", ".join([f"{rv.name}" for rv in self.roles.values()])
+        return f"Relation({self.predicate_name}({role_values_str})): {self.truth_value}"

@@ -156,4 +156,5 @@ class TemporalRelation(Relation):
     # ──────────────────────────────────────────────
 
     def __repr__(self):
-        return f"<TemporalRelation type={self.relation_type} intervals={list(self.interval_truths.items())}>"
+        role_values_str = ", ".join([f"{rv}" for rv in self.roles.values()])
+        return f"TemporalRelation({self.predicate}({role_values_str}))"

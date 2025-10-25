@@ -4,7 +4,7 @@ from datetime import timedelta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.relation import Relation, Predicate
 from core.context import RelationContext
-from core.truth import TruthValue, TruthState, Modality
+from core.truth import TruthValue, TruthState
 
 def test_context_evaluation():
     print("\n=== Context Logic Tests ===")

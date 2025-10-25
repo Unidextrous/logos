@@ -94,4 +94,4 @@ class Entity:
         return e
         
     def __repr__(self):
-        return f"Entity({self.name})"
+        return self.name

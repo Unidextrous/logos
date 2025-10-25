@@ -2,7 +2,7 @@
 from __future__ import annotations
 import uuid
 from typing import Union, Callable
-from .truth import TruthState, TruthValue, Modality  # Make sure Modality is imported
+from .truth import TruthState, TruthValue
 
 
 class RelationContext:
@@ -49,9 +49,9 @@ class RelationContext:
         if op == "NOT":
             tv = vals[0]
             if tv.value == TruthState.TRUE:
-                return TruthValue(TruthState.FALSE, modality=tv.modality)
+                return TruthValue(TruthState.FALSE)
             if tv.value == TruthState.FALSE:
-                return TruthValue(TruthState.TRUE, modality=tv.modality)
+                return TruthValue(TruthState.TRUE)
             # UNKNOWN passes through
             return tv
 
