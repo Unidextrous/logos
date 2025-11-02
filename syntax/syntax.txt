@@ -24,18 +24,18 @@
         TRUE, FALSE, UNKNOWN — ternary truth values
         Numbers: 42, 3.14
         Strings: "Hello" or 'World'
-        Entities: Capitalized identifiers like CAT, FIDO, LOGOS
-        Predicates: Capitalized identifiers like IS, LOVES, HAS
+        Entities: Typically PascalCase identifiers like Cat, Fido, Logos
+        Predicates: Typically PascalCase identifiers like Is, Loves, Has
     Composite Types:
         Lists: [1, 2, 3]
         Maps: {key: value, other: 2}
         Sets: <1, 2, 3>
         Relations
-            RELATION <RELATION_TYPE (Optional, default: GENERAL)> <PREDICATE> {ROLES: [<ROLES: ENTITIES>], CONTEXT: <RELATION_CONTEXT>, TRUTH: <TRUTH_VALUE>}
+            REL <PRED> {ROLES: [<ROLES: ENTS>], TRUTH: <T_VAL>}
         TimeIntervals
-            TIME_INTERVAL [<START_TIME>, <END_TIME>]
+            TIME_INT [<START_TIME>, <END_TIME>]
         TemporalRelations
-            TEMPORAL_RELATION <RELATION_TYPE (Optional, default: GENERAL)> <PREDICATE> {ROLES: [<ROLES: ENTITIES>], CONTEXT: <RELATION_CONTEXT>, TRUTH: <TRUTH_VALUE>}
+            TEMP_REL <PRED> {ROLES: [<ROLES: ENTS>], TRUTH: <T_VAL>}
         Contexts
             RELATION_CONTEXT {EXPRESSION: <EXPRESSION>}
         QuantifiedRelations
@@ -76,26 +76,28 @@
 
 9. Ontology Management
     Declaration:
-        ENT <NAME>([<PARENTS>] | [<ALT_PARENTS>]):
-        PRED <NAME>(<ROLES>)
-        REL <PREDICATE>(<ENTS>) = <TRUTH_VALUE>
-        TEMP_REL <PREDICATE>(<ENTS>) = <Default: TRUTH_VALUE>
-        TIME_INT <TEMP_REL> [<START_TIME> -> <END_TIME>] = <TRUTH_VALUE>
-        QUANT_REL <FORALL | EXISTS> [<VARIABLES>]: <RELATION_WITH_VARIABLES> = <TRUTH_VALUE>
+        ADD ENT <NAME>([<PARENTS>] | [<ALT_PARENTS>]):
+        ADD PRED <NAME>(<ROLES>)
+        ADD REL <PREDICATE>(<ENTS>) = <T_VAL>
+        ADD TEMP_REL <PREDICATE>(<ENTS>) = <Default: T_VAL>
+        ADD TIME_INT <TEMP_REL> [<START_TIME> -> <END_TIME>] = <T_VAL>
+        ADD QUANT_REL <FORALL | EXISTS> [<VARIABLES>]: <RELATION_WITH_VARIABLES> = <T_VAL>
     Serialization:
         SAVE_ONTOLOGY "file_name.json"
         LOAD_ONTOLOGY "file_name.json", MERGE: <TRUE | FALSE>
     Querying
         QUERY statements return a list of matching objects or UNKNOWN if no match.
-        QUERY ENT WHERE NAME="<NAME>", PARENTS=[...], ANCESTORS=[...], RELATIONS=[...]
-        QUERY PRED WHERE ROLES = [...]
-        QUERY REL WHERE PREDICATE=<PREDICATE>, ENTITIES=[...], TRUTH=<TRUTH_VALUE>
-        QUERY TEMP_REL WHERE PREDICATE=<PREDICATE>, ENTITIES=[...], DEFAULT_TRUTH=<TRUTH_VALUE>, TIME_INTERVALS=[...]
-        QUERY QUANT_REL WHERE QUANTIFIER=<FORALL or EXISTS>, PREDICATE=<PREDICATE>, ENTITIES=[...], TRUTH: <TRUTH_VALUE>
+        QUERY ENT WHERE NAME=<NAME>, PARENTS=[...], ANCESTORS=[...], RELATIONS=[...]
+        QUERY PRED WHERE NAME=<NAME>, ROLES = [...]
+        QUERY REL WHERE PREDICATE=<PRED>, ENTITIES=[...], TRUTH=<T_VAL>
+        QUERY TEMP_REL WHERE PREDICATE=<PRED>, ENTITIES=[...], DEFAULT_TRUTH=<T_VAL>, TIME_INTERVALS=[...]
+        QUERY QUANT_REL WHERE QUANTIFIER=<FORALL or EXISTS>, PREDICATE=<PRED>, ENTITIES=[...], TRUTH: <T_VAL>
     User-accessible functions:
-        ADD_ALIAS(<ENTITY>, <ALIAS>)
-        DESCRIBE_HIERARCHY(<ENTITY>)
-        ADD_INVERSE_PREDICATE(<PREDICATE1>, <PREDICATE2>, ROLE_MAPPING={PRED1_ROLES: PRED2_ROLES})
+        <ENT>.<BRANCH_PARENT>.add_parent([<PARENT1>, <PARENT2>, ...])
+        <ENT>.add_branch([<PARENT1>, <PARENT2>, ...])
+        <ENT>.delete_parent([<PARENT1>, <PARENT2>, ...])
+        <ENT>.describe_hierarchy()
+        <PRED>.add_inverse(<INVERSE_PRED>, ROLE_MAPPING={PRED1_ROLES: PRED2_ROLES})
 
 10. Syntax Flexibility
 Logos is terminal-friendly; code may be written on a single line.
