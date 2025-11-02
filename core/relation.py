@@ -153,5 +153,5 @@ class Relation:
         return r
     
     def __repr__(self):
-        role_values_str = ", ".join([f"{rv.name}" for rv in self.roles.values()])
+        role_values_str = ", ".join([rv for rv in self.roles.values()])
         return f"Relation({self.predicate_name}({role_values_str})): {self.truth_value}"

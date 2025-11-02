@@ -32,8 +32,8 @@ class QuantifiedRelation:
 
     def instantiate(self, **kwargs):
         """Generate a Relation from the template with variables substituted"""
-        predicate_name = self.relation_template["predicate"]
-        roles_template = self.relation_template["roles"]
+        predicate_name = self.relation_template.predicate
+        roles_template = self.relation_template.roles
 
         roles_instantiated = {}
         for role, val in roles_template.items():
@@ -94,3 +94,7 @@ class QuantifiedRelation:
         else:
             return template
         
+    def __repr__(self):
+        vars_str = ", ".join(var for var in self.variables)
+        role_values_str = ", ".join(rv for rv in self.relation_template.roles.values())
+        return f"{self.quantifier.name}({vars_str}): {self.relation_template.predicate.name}({role_values_str}): {self.truth_value}"
