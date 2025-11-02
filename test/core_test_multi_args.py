@@ -26,7 +26,6 @@ HUMAN_HAS_BODY_PARTS = onto.add_relation(
         "part2": ARMS,
         "part3": LEGS
     },
-    relation_type="GENERAL",
     truth_value=TruthValue(value=TruthState.TRUE)  # Alethic TRUE
 )
 

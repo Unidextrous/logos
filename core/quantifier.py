@@ -96,5 +96,5 @@ class QuantifiedRelation:
         
     def __repr__(self):
         vars_str = ", ".join(var for var in self.variables)
-        role_values_str = ", ".join(rv for rv in self.relation_template.roles.values())
+        role_values_str = ", ".join(f"{rv}" for rv in self.relation_template.roles.values())
         return f"{self.quantifier.name}({vars_str}): {self.relation_template.predicate.name}({role_values_str}): {self.truth_value}"

@@ -168,8 +168,6 @@ class Ontology:
         self,
         predicate,
         roles: dict,
-        relation_type="GENERAL",
-        context=None,
         truth_value=None,
     ):
         """
@@ -180,8 +178,6 @@ class Ontology:
         Args:
             predicate (Predicate): Type of relation.
             roles (dict[str, Entity]): Role-to-entity mapping.
-            relation_type (str): Logical type.
-            context (any): Optional context dependency.
             truth_value (TruthValue | None): Optional explicit truth value.
 
         Returns:
@@ -192,7 +188,6 @@ class Ontology:
             if (
                 existing.predicate == predicate
                 and existing.roles == roles
-                and existing.context == context
             ):
                 return existing
 
@@ -200,23 +195,13 @@ class Ontology:
         r = Relation(
             predicate,
             roles,
-            relation_type,
-            context,
             truth_value=truth_value,
         )
-
-        # Register dependency if context is another relation
-        if isinstance(context, Relation):
-            context.dependents.add(r)
-
         self.relations.append(r)
 
         # Attach to entities
         for e in roles.values():
             e.relations.append(r)
-
-        # Propagate to descendants
-        self.propagate_relation_to_descendants(r)
 
         return r
 
@@ -225,8 +210,6 @@ class Ontology:
         predicate,
         roles: dict,
         *,
-        relation_type: str = "GENERAL",
-        context=None,
         default_truth=None
     ):
         """
@@ -237,8 +220,6 @@ class Ontology:
             roles (dict): role->Entity mapping
             start_time (datetime|None): when relation begins (may be None)
             end_time (datetime|None): when relation ends (may be None)
-            relation_type (str): logical subtype (e.g., CONTEXTUAL, PERMANENT...)
-            context (any): optional context (Relation, RelationContext, or callable)
             truth_value (TruthValue | None): optional explicit truth value.
             active (bool): whether the relation starts active
         """
@@ -247,8 +228,6 @@ class Ontology:
                 isinstance(existing, TemporalRelation)
                 and existing.predicate == predicate
                 and existing.roles == roles
-                and existing.context == context
-                and getattr(existing, "relation_type", None) == relation_type.upper()
             ):
                 return existing
 
@@ -256,8 +235,6 @@ class Ontology:
         r = TemporalRelation(
             predicate=predicate,
             roles=roles,
-            context=context,
-            relation_type=relation_type,
             default_truth=default_truth
         )
 
@@ -266,45 +243,7 @@ class Ontology:
         for e in roles.values():
             e.relations.append(r)
 
-        self.propagate_relation_to_descendants(r)
-
-        if isinstance(context, Relation):
-            context.dependents.add(r)
-
         return r
-
-    def propagate_relation_to_descendants(self, relation):
-        """
-        Ensure descendants of any involved entities inherit this relation.
-        """
-        involved = set(relation.roles.values())
-        for e in self.entities.values():
-            if any(ancestor in e.get_all_ancestors() for ancestor in involved):
-                if relation not in e.relations:
-                    e.relations.append(relation)
-
-    def refresh_context_relations(self):
-        """
-        Re-evaluate all contextual relations recursively based on their dependencies.
-        """
-        visited = set()
-
-        def update_relation(relation):
-            if relation in visited:
-                return
-            visited.add(relation)
-            if isinstance(relation.context, Relation):
-                update_relation(relation.context)
-            relation.update_from_context()
-
-        for r in self.relations:
-            if r.context:
-                update_relation(r)
-
-        # Update all contextual relations
-        for r in self.relations:
-            if getattr(r, "relation_type", None) == "CONTEXTUAL":
-                update_relation(r)
 
     def add_quantified_relation(self, quantifier, variables, relation_template, truth_value=None):
         """
@@ -328,7 +267,6 @@ class Ontology:
 
     def query_relations(
         self,
-        relation_type: str | None = None,
         predicate: str | None = None,
         roles: list[str] | None = None,
         entities: list[str] | None = None,
@@ -339,7 +277,6 @@ class Ontology:
         Flexible query method to search for Relations and QuantifiedRelations.
 
         Args:
-            relation_type (str, optional): Filter by relation_type attribute (e.g., "GENERAL", "CONTEXTUAL").
             predicate (str, optional): Name of the predicate to filter by.
             entities (list[str], optional): One or more entity names/aliases involved in the relation.
             roles (list[str], optional): Only match relations containing these role names
@@ -353,10 +290,6 @@ class Ontology:
 
         # --- Relations ---
         for r in self.relations:
-            # Relation type filter
-            if relation_type and getattr(r, "relation_type", None) != relation_type:
-                continue
-                
             # Role filter
             if roles and not all(role in r.roles for role in roles):
                 continue
@@ -390,10 +323,6 @@ class Ontology:
 
         # --- QuantifiedRelations ---
         for qr in getattr(self, "quantified_relations", []):
-            # Relation type filter (pass)
-            if relation_type:
-                continue
-
             # Role filter
             if roles:
                 if not all(role in qr.relation_template["roles"] for role in roles):

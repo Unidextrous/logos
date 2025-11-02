@@ -64,11 +64,9 @@ class TemporalRelation(Relation):
         predicate,
         roles: dict,
         *,
-        relation_type: str = "GENERAL",
-        context=None,
         default_truth: TruthValue | None = None
     ):
-        super().__init__(predicate, roles, relation_type=relation_type, context=context)
+        super().__init__(predicate, roles)
         self.interval_truths: dict[TimeInterval, TruthValue] = {}
         self.default_truth = default_truth or TruthValue(TruthState.UNKNOWN)
 
@@ -104,8 +102,8 @@ class TemporalRelation(Relation):
             moment = datetime.now()
         interval = next((i for i in self.interval_truths if i.contains(moment)), None)
         if interval is None:
-            return self.default_truth.evaluate()
-        return self.interval_truths[interval].evaluate()
+            return self.default_truth.value
+        return self.interval_truths[interval].value
 
     def get_current_interval(self) -> tuple[TimeInterval, TruthValue] | None:
         """Return the current interval and its TruthValue, if any."""
@@ -135,11 +133,8 @@ class TemporalRelation(Relation):
         # Reconstruct the base Relation
         predicate = ontology.predicates[data["predicate"]]
         roles = {role_name: ontology.entities[ent_id] for role_name, ent_id in data["roles"].items()}
-        context = data.get("context")
         default_truth = TruthValue.from_dict(data["default_truth"]) if data.get("default_truth") else None
-
-        r = cls(predicate, roles, relation_type=data.get("relation_type", "GENERAL"),
-                context=context, default_truth=default_truth)
+        r = cls(predicate, roles, default_truth=default_truth)
 
         # Reconstruct interval_truths
         for interval_dict in data.get("interval_truths", []):
